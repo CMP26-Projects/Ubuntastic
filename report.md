@@ -3,7 +3,27 @@
 
 ## Data Structue Used
 
-### Non-Preermitive HPF
+### Non-Preermitive Highest Priority First (HPF)
+
+| Feature       | Details                         |
+|---------------|---------------------------------|
+| Type          |                                 |
+| Description   |                                 |
+| Implementation|                                 |
+| Advantages    |                                 |
+| Disadvantages |                                 |
+
+### Shortest Remaining Time Next (SRTN)
+
+| Feature       | Details                         |
+|---------------|---------------------------------|
+| Type          |                                 |
+| Description   |                                 |
+| Implementation|                                 |
+| Advantages    |                                 |
+| Disadvantages |                                 |
+
+### Round Robin (RR)
 
 | Feature       | Details                         |
 |---------------|---------------------------------|
@@ -42,4 +62,4 @@ The workload was distributed among team members as follows:
 
 | Task                     | Time Taken (hours) |
 |--------------------------|--------------------|
-| Clock                    | 131 milion years   |
+| Process_generator        | 131 milion years   |
