@@ -12,3 +12,16 @@ all: clean build
 
 run:
 	./process_generator.out
+
+
+testschdular:
+	@gcc scheduler.c -o scheduler.o
+	@./scheduler.o
+
+
+testprocessgen:
+	@gcc process_generator.c -o process_generator.o
+	@./process_generator.o
+
+
+
