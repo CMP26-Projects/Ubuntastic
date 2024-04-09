@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include "func.c"
 
 struct schdularType
 {
@@ -68,38 +69,10 @@ int creatShMemory()
 
     return shmid;
 }
-
-int main(int argc, char *argv[])
+struct schdularType *ReadProcessInfo(int shmid)
 {
-    // Schedular Attribute
-    int totalProcessNum, activateProcess;
-    // initiate Clock
-    // initClk();
-    // Signals Handlers
-    // signal(SIGINT,HandlerINT);
-    // signal(SIGCHLD,HandlerCHILD);
-
-    /// get type of schedular from process_generator using message queue
-
-    struct schdularType schedularmessage;
-    int done;
-
-    int msgid = createMessageQueue();
-    done = msgrcv(msgid, &schedularmessage, sizeof(schedularmessage.schedType), 0, !IPC_NOWAIT);
-
-    if (done == -1)
-    {
-        perror("error in reciving ?");
-    }
-    else
-    {
-        printf("the message reseved in : %s\n", schedularmessage.schedType);
-    }
-    msgctl(msgid, IPC_RMID, (struct msqid_ds *)0);
-
     struct processData *P = (struct processData *)malloc(sizeof(struct processData));
 
-    int shmid = creatShMemory();
     void *shmaddr = shmat(shmid, (void *)0, 0);
     if (shmaddr == (void *)-1)
     {
@@ -115,6 +88,73 @@ int main(int argc, char *argv[])
 
     strcpy((char *)shmaddr, "quit");
     shmdt(shmaddr);
+    return P;
+}
+
+struct schdularType schedularmessage;
+int getSchedularType(int msgid)
+{
+    int done = msgrcv(msgid, &schedularmessage, sizeof(schedularmessage.schedType), 0, !IPC_NOWAIT);
+
+    if (done == -1)
+    {
+        perror("error in reciving ?");
+    }
+    else
+    {
+        printf("the message reseved in : %s\n", schedularmessage.schedType);
+    }
+    msgctl(msgid, IPC_RMID, (struct msqid_ds *)0);
+    if (schedularmessage.schedType == "RR")
+        return 1;
+    else if (schedularmessage.schedType == "RSJN")
+        return 2;
+    else
+        return 3;
+}
+
+int Creatsem(int sem2)
+{
+
+    int keyid_sem = ftok("file.txt", 62);
+    int keyid_sem = ftok("file.txt", 63);
+    sem2 = semget(keyid_sem, 1, 0666 | IPC_CREAT);
+    int sem = semget(keyid_sem, 1, 0666 | IPC_CREAT);
+    if (sem == -1)
+    {
+        perror("Error in create sem");
+        exit(-1);
+    }
+    return sem;
+}
+int main(int argc, char *argv[])
+{
+    // Schedular Attribute
+    int totalProcessNum, activateProcess;
+    // initiate Clock
+    // initClk();
+    // Signals Handlers
+    // signal(SIGINT,HandlerINT);
+    // signal(SIGCHLD,HandlerCHILD);
+
+    /// get type of schedular from process_generator using message queue
+    int sem2;
+    int sem1 = Creatsem(&sem2);
+
+    int done;
+
+    int msgid = createMessageQueue();
+    int type = getSchedularType(msgid);
+    int shmid = creatShMemory();
+
+    struct processData *P = (struct processData *)malloc(sizeof(struct processData));
+
+    while (1)
+    {
+        down(sem1);
+        P = ReadProcessInfo(shmid);
+        up(sem2);
+    }
 
     // TODO implement the scheduler :)
     // upon termination release the clock resources.
