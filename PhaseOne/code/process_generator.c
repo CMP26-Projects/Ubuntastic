@@ -1,115 +1,34 @@
+//Author: Somia
 //=============Contents============//
-//struct ProcessData
-//struct Queue
 //readFile()
+//clearResources()
+//Scheduler Forking
 
 #include "headers.h"
 
 void clearResources(int);
 
-//==============ProcessData==============//
-struct ProcessData
-{
-    int ID;
-    int BT;
-    int AT;
-    int Priority;
-};
-///////////////////////////////////////
-
-//===============Queue===============//
-// Define the structure for a queue node
-
-struct QNode {
-    struct ProcessData data;
-    struct QNode* next;
-};
-
-// Define the structure for the queue itself
-struct Queue {
-    struct QNode* front;
-    struct QNode* rear;
-    int count;
-};
-
-bool isEmpty(struct Queue* q)
-{
-    return q->front == NULL;
-}
-
-void peek(struct Queue* q, struct ProcessData *p)
-{
-     if (q->front == NULL) {
-        // Queue is empty, nothing to dequeue
-        p=NULL;
-        return;
-    }
-    *p=q->front->data;
-}
-
-// Initialize an empty queue
-void initializeQueue(struct Queue* q) {
-    q->front = q->rear = NULL;
-}
-
-// Enqueue operation: Add a new element to the rear of the queue
-void enQueue(struct Queue* q, struct ProcessData x) {
-    struct QNode* temp = (struct QNode*)malloc(sizeof(struct QNode));
-    temp->data = x;
-    temp->next = NULL;
-
-    if (q->rear == NULL) {
-        // If the queue is empty, set both front and rear to the new node
-        q->front = q->rear = temp;
-    } else {
-        // Otherwise, add the new node after the current rear and update rear
-        q->rear->next = temp;
-        q->rear = temp;
-    }
-    (q->count)++;
-}
-
-// Dequeue operation: Remove the front element from the queue
-bool deQueue(struct Queue* q, struct ProcessData *p) {
-    if (q->front == NULL) {
-        // Queue is empty, nothing to dequeue
-        p=NULL;
-        return 0;
-    }
-
-    struct QNode* temp = q->front;
-    q->front = q->front->next;
-
-    if (q->front == NULL) {
-        // If the front becomes NULL, the queue is now empty, so update rear
-        q->rear = NULL;
-    }
-    (q->count)--;
-    *p = temp->data;
-    free(temp);
-   return 1;
-}
-
 //=========Read File=============//
-void readFile(char *filePath, struct Queue *processData)
-{   
-    initializeQueue(processData);
+int readFile(char *filePath, struct Queue *Process)
+{   int numProcesses=0;
+    initializeQueue(Process);
     int id, bt, at, pri;
     char dummy[100]; 
     FILE *inputFile= fopen(filePath,"r");
     if(!inputFile)
         {
             printf("Error in opening the file\n");
-            return;
+            return -1;
         }
     fgets(dummy,sizeof(dummy),inputFile); //ignoring the first line
 
     while(fscanf(inputFile,"%d\t%d\t%d\t%d\n",&id,&bt,&at,&pri)==4)
         {
-            struct ProcessData pd={id,bt,at,pri};
-            enQueue(processData,pd);
+            struct Process pd={id,bt,at,pri,bt};
+            enqueue(Process,pd);
+            numProcesses++;
         }
-
+    return numProcesses;
 }
 
 int main(int argc, char * argv[])
@@ -118,8 +37,8 @@ int main(int argc, char * argv[])
     // TODO Initialization
 
     // 1. Read the input files.
-    struct Queue processData;
-    readFile(argv[1],&processData);
+    struct Queue Process;
+    int numProcesses = readFile(argv[1],&Process);
     
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     int schedAlgo=-1;
@@ -162,23 +81,42 @@ int main(int argc, char * argv[])
     default:
         break;
     }
-
     // 3. Initiate and create the scheduler and clock processes.
-    
+    pid_t scheduler = fork();
+    if(scheduler == -1)
+        perror("Error in Forking the Scheduler Process.\n");
+    else if(scheduler == 0)
+    {
+        //printf("I'm the scheduler Process\n"); //<TEST>
+        char n[5], s[5], sw[5], t[5];
+        sprintf(n,"%d",numProcesses);
+        sprintf(s,"%d",schedAlgo);
+        sprintf(sw,"%d",switchTime);
+        sprintf(t,"%d",timeSlice);
+        system("gcc scheduler.c -o scheduler.out"); //Compiling the scheduler file
+        execl("scheduler.out","./scheduler.out",n,s,sw,t,NULL); //exchange the current process with the scheduler's & passing it required Arguments
+    }
+    int x;
+    wait(&x); //<TEST>
+    //printf("I'm the Generator Process\n"); //Test, To be deleted.
     // 4. Use this function after creating the clock process to initialize clock
-   
-    initClk();
+    
+  //  initClk();
     // To get time use this
-    int x = getClk();
-    printf("current time is %d\n", x);
+    //int x = getClk();
+    //printf("current time is %d\n", x);
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // 7. Clear clock resources
-    destroyClk(true);
+    //destroyClk(true);
 }
 
-void clearResources(int signum)
+void clearResources(int signum) //may not be complete. will be edited if something is missing <MAY BE EDITED>
 {
     //TODO Clears all resources in case of interruption
+    destroyClk(true);
+    signal(SIGINT,clearResources); // <Q> i think it cannot be after the raise call.. mot sure yet, will find out later :D 
+    printf("ebl3\n"); //<TEST>
+    raise(SIGKILL);
 }
