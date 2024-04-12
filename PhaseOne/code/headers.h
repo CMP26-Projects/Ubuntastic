@@ -1,3 +1,8 @@
+//Author: Somia
+//=============Contents============//
+//Queue Struct
+//Process Struct <MAY BE EDITED>
+//=================================//
 #include <stdio.h>      //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -62,15 +67,16 @@ void destroyClk(bool terminateAll)
         killpg(getpgrp(), SIGINT);
     }
 }
-//=============Data Structures===============//
 
-//==============ProcessData==============//
-struct ProcessData
+//==============Process==============//
+struct Process
 {
     int ID;
     int BT;
     int AT;
     int Priority;
+    int RT;
+    int state; //0=Started, 1=Resumed, 2=Stopped, 3=Finished
 };
 ///////////////////////////////////////
 
@@ -78,11 +84,10 @@ struct ProcessData
 // Define the structure for a queue node
 
 struct QNode {
-    struct ProcessData data;
+    struct Process data;
     struct QNode* next;
 };
 
-// Define the structure for the queue itself
 struct Queue {
     struct QNode* front;
     struct QNode* rear;
@@ -94,32 +99,26 @@ bool isEmpty(struct Queue* q)
     return q->front == NULL;
 }
 
-// Initialize an empty queue
 void initializeQueue(struct Queue* q) {
     q->front = q->rear = NULL;
 }
 
-// Enqueue operation: Add a new element to the rear of the queue
-void enQueue(struct Queue* q, struct ProcessData x) {
+void enqueue(struct Queue* q, struct Process x) {
     struct QNode* temp = (struct QNode*)malloc(sizeof(struct QNode));
     temp->data = x;
     temp->next = NULL;
 
     if (q->rear == NULL) {
-        // If the queue is empty, set both front and rear to the new node
         q->front = q->rear = temp;
     } else {
-        // Otherwise, add the new node after the current rear and update rear
         q->rear->next = temp;
         q->rear = temp;
     }
     (q->count)++;
 }
 
-// Dequeue operation: Remove the front element from the queue
-bool deQueue(struct Queue* q, struct ProcessData *p) {
+bool dequeue(struct Queue* q, struct Process *p) {
     if (q->front == NULL) {
-        // Queue is empty, nothing to dequeue
         p=NULL;
         return 0;
     }
@@ -128,7 +127,6 @@ bool deQueue(struct Queue* q, struct ProcessData *p) {
     q->front = q->front->next;
 
     if (q->front == NULL) {
-        // If the front becomes NULL, the queue is now empty, so update rear
         q->rear = NULL;
     }
     (q->count)--;
