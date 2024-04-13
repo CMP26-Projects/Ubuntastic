@@ -19,9 +19,8 @@ test:
 	@gcc clk.c -o clk.out
 	@gcc scheduler.c -o scheduler.out
 	@gcc test_generator.c -o test_generator.out
-	@./scheduler.out
-	@./process_generator.out
 	@./clk.out
+	@./process_generator.out
 	
 	
 

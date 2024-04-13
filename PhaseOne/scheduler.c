@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
     {
         // initiate Clock
         initClk();
+
         struct QNode *node;
         struct Process *P;
 
@@ -94,6 +95,7 @@ int main(int argc, char *argv[])
             {
                 node = ProcessQueue.front;
                 P = &node->data;
+
                 int Processid = fork();
                 if (Processid == -1)
                     perror("there is an error in forking ");
@@ -104,18 +106,17 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
-
                     if (type == 1)
                     {
-                        enqueue(&ProcessQueue, *P);
+                        // enqueue(&ProcessQueue, *P);
                     }
                     else if (type == 2)
                     {
-                        enqueue(&ProcessQueue, *P);
+                        // enqueue(&ProcessQueue, *P);
                     }
                     else
                     {
-                        enqueue(&ProcessQueue, *P);
+                        // enqueue(&ProcessQueue, *P);
                     }
                     dequeue(&ProcessQueue, P);
                 }
@@ -128,8 +129,8 @@ int main(int argc, char *argv[])
     {
         int sem2;
         int sem1 = Creatsem(&sem2);
-        int msgid = createMessageQueue();
-        type = getSchedularType(msgid);
+        // int msgid = createMessageQueue();
+        // type = getSchedularType(msgid);
         int shmid = creatShMemory();
 
         struct Process *P;
