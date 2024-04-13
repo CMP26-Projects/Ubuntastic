@@ -65,6 +65,13 @@ void destroyClk(bool terminateAll)
         killpg(getpgrp(), SIGINT);
     }
 }
+//==============Message Queue =========//
+
+struct schdularType
+{
+    int mtype;
+    int schedType;
+};
 
 //==============Process==============//
 struct Process
@@ -178,4 +185,49 @@ void up(int sem)
         perror("Error in up()");
         exit(-1);
     }
+}
+
+int createMessageQueue()
+{
+    key_t key_id;
+    int msgid, recval;
+
+    key_id = ftok("file.txt", 65);
+    msgid = msgget(key_id, 0666 | IPC_CREAT);
+
+    if (msgid == -1)
+    {
+        perror("there error in creates a queue !");
+        exit(-1);
+    }
+    printf("Message queue ID is : %d \n", msgid);
+    return msgid;
+}
+
+int creatShMemory()
+{
+    key_t key = ftok("file.txt", 67);
+    int shmid = shmget(key, 50, IPC_CREAT | 0666);
+    if ((long)shmid == -1)
+    {
+        perror("Error in creating shm!");
+        exit(-1);
+    }
+
+    return shmid;
+}
+
+int Creatsem(int *sem2)
+{
+
+    key_t keyid_sem1 = ftok("file.txt", 62);
+    key_t keyid_sem2 = ftok("file.txt", 63);
+    *sem2 = semget(keyid_sem2, 1, 0666 | IPC_CREAT);
+    int sem1 = semget(keyid_sem1, 1, 0666 | IPC_CREAT);
+    if (sem1 == -1 || *sem2 == -1)
+    {
+        perror("Error in create sem");
+        exit(-1);
+    }
+    return sem1;
 }

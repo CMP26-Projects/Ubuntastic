@@ -6,18 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include "func.c"
-
-struct schdularType
-{
-    int mtype;
-    char schedType[70];
-};
-struct processData
-{
-
-    int id, arrival, runtime, priority;
-};
 
 void HandlerINT(int signum)
 {
@@ -41,37 +29,9 @@ void updateOutfile()
 {
 }
 
-int createMessageQueue()
+struct Process *ReadProcessInfo(int shmid)
 {
-    key_t key_id;
-    int msgid, recval;
-
-    key_id = ftok("file.txt", 65);
-    msgid = msgget(key_id, 0666 | IPC_CREAT);
-
-    if (msgid == -1)
-    {
-        perror("there error in creates a queue !");
-        exit(-1);
-    }
-    printf("Message queue ID is : %d \n", msgid);
-    return msgid;
-}
-int creatShMemory()
-{
-    int key = ftok("file.txt", 67);
-    int shmid = shmget(key, 50, IPC_CREAT | 0666);
-    if ((long)shmid == -1)
-    {
-        perror("Error in creating shm!");
-        exit(-1);
-    }
-
-    return shmid;
-}
-struct schdularType *ReadProcessInfo(int shmid)
-{
-    struct processData *P = (struct processData *)malloc(sizeof(struct processData));
+    struct Process *P = (struct Process *)malloc(sizeof(struct Process));
 
     void *shmaddr = shmat(shmid, (void *)0, 0);
     if (shmaddr == (void *)-1)
@@ -82,18 +42,18 @@ struct schdularType *ReadProcessInfo(int shmid)
 
     printf("\nReader: Shared memory attached at address %p\n", shmaddr);
 
-    P = (struct processData *)shmaddr;
+    P = (struct Process *)shmaddr;
 
-    printf("the message reseved in : %d %d %d %d \n", P->arrival, P->id, P->priority, P->runtime);
+    printf("the message reseved in : %d %d %d %d  \n", P->AT, P->BT, P->ID, P->Priority);
 
     strcpy((char *)shmaddr, "quit");
     shmdt(shmaddr);
     return P;
 }
 
-struct schdularType schedularmessage;
 int getSchedularType(int msgid)
 {
+    struct schdularType schedularmessage;
     int done = msgrcv(msgid, &schedularmessage, sizeof(schedularmessage.schedType), 0, !IPC_NOWAIT);
 
     if (done == -1)
@@ -102,59 +62,90 @@ int getSchedularType(int msgid)
     }
     else
     {
-        printf("the message reseved in : %s\n", schedularmessage.schedType);
+        printf("the message reseved in : %d\n", schedularmessage.schedType);
     }
     msgctl(msgid, IPC_RMID, (struct msqid_ds *)0);
-    if (schedularmessage.schedType == "RR")
-        return 1;
-    else if (schedularmessage.schedType == "RSJN")
-        return 2;
-    else
-        return 3;
+    return schedularmessage.schedType;
 }
 
-int Creatsem(int sem2)
-{
-
-    int keyid_sem = ftok("file.txt", 62);
-    int keyid_sem = ftok("file.txt", 63);
-    sem2 = semget(keyid_sem, 1, 0666 | IPC_CREAT);
-    int sem = semget(keyid_sem, 1, 0666 | IPC_CREAT);
-    if (sem == -1)
-    {
-        perror("Error in create sem");
-        exit(-1);
-    }
-    return sem;
-}
 int main(int argc, char *argv[])
 {
-    // Schedular Attribute
-    int totalProcessNum, activateProcess;
-    // initiate Clock
-    // initClk();
+    // =======Schedular Attribute==========//
+
+    int totalProcessNum = 0;                 // total num of process in the CPU
+    int type;                                // Type of schedular
+    struct Process *ActivatedProcess = NULL; // pointer on the ruccing Process
+    struct Queue ProcessQueue;               // receved Process from process generator
+    struct Queue RR;
+
+    signal(SIGINT, HandlerINT);
+    signal(SIGCHLD, HandlerCHILD);
+    int Pid = fork();
+    if (Pid != 0)
+    {
+        // initiate Clock
+        initClk();
+        struct QNode *node;
+        struct Process *P;
+
+        while (1)
+        {
+            if (!isEmpty(&ProcessQueue))
+            {
+                node = ProcessQueue.front;
+                P = &node->data;
+                int Processid = fork();
+                if (Processid == -1)
+                    perror("there is an error in forking ");
+
+                if (Processid == 0)
+                {
+                    // execl("/process","process",P->BT,NULL);
+                }
+                else
+                {
+
+                    if (type == 1)
+                    {
+                        enqueue(&ProcessQueue, *P);
+                    }
+                    else if (type == 2)
+                    {
+                        enqueue(&ProcessQueue, *P);
+                    }
+                    else
+                    {
+                        enqueue(&ProcessQueue, *P);
+                    }
+                    dequeue(&ProcessQueue, P);
+                }
+
+                printf("the process receved : ID :%d  AT: %d\n", P->ID, P->AT);
+            }
+        }
+    }
+    else
+    {
+        int sem2;
+        int sem1 = Creatsem(&sem2);
+        int msgid = createMessageQueue();
+        type = getSchedularType(msgid);
+        int shmid = creatShMemory();
+
+        struct Process *P;
+
+        while (1)
+        {
+            down(sem2);
+            P = ReadProcessInfo(shmid);
+            enqueue(&ProcessQueue, *P);
+            up(sem1);
+        }
+    }
+
     // Signals Handlers
-    // signal(SIGINT,HandlerINT);
-    // signal(SIGCHLD,HandlerCHILD);
 
     /// get type of schedular from process_generator using message queue
-    int sem2;
-    int sem1 = Creatsem(&sem2);
-
-    int done;
-
-    int msgid = createMessageQueue();
-    int type = getSchedularType(msgid);
-    int shmid = creatShMemory();
-
-    struct processData *P = (struct processData *)malloc(sizeof(struct processData));
-
-    while (1)
-    {
-        down(sem1);
-        P = ReadProcessInfo(shmid);
-        up(sem2);
-    }
 
     // TODO implement the scheduler :)
     // upon termination release the clock resources.
