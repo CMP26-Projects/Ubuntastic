@@ -34,20 +34,80 @@ int readFile(char *filePath, struct Queue *Process)
 
 int main(int argc, char *argv[])
 {
-
     int sem2;
     int sem1 = Creatsem(&sem2);
     struct schdularType schedularmessage;
     struct Queue ProcessQueue;
-
     signal(SIGINT, clearResources);
-    int Pid = fork();
 
-    if (Pid == -1)
-        perror("There error in forking ");
+    // 1. Read the input files.
+    int numProcesses = readFile(argv[1], &ProcessQueue);
 
-    if (Pid == 0)
+    // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
+    int schedAlgo = -1;
+    int switchTime = -1;
+    int timeSlice = -1; // RR
+
+    do
     {
+        printf("|| Choose a Scheduling Algorithm ||\n");
+        printf("For RR, Enter 0\nFor SRTF, Enter 1\nFor HPF, Enter 2\nAlgorithm: ");
+        scanf("%d", &schedAlgo);
+        if (schedAlgo != 0 && schedAlgo != 1 && schedAlgo != 2)
+            printf("Invalid Option -> ");
+    } while (schedAlgo != 0 && schedAlgo != 1 && schedAlgo != 2);
+
+    do
+    {
+        printf("|| Enter the Context Switching Time ||\nTime: ");
+        scanf("%d", &switchTime);
+        if (switchTime < 0)
+            printf("\nInvalid Option -> ");
+    } while (switchTime < 0);
+
+    switch (schedAlgo)
+    {
+    case 0:
+    {
+        printf("You've Chosen RR.\n");
+        do
+        {
+            printf("||Enter the Time Slice||\nTime: ");
+            scanf("%d", &switchTime);
+            if (switchTime < 0)
+                printf("\nInvalid Option -> ");
+        } while (switchTime < 0);
+    }
+    break;
+    default:
+        break;
+    }
+    printf("hina");
+    // 3. Initiate and create the scheduler and clock processes.
+    pid_t scheduler = fork();
+    if (scheduler == -1)
+        perror("Error in Forking the Scheduler Process.\n");
+    else if (scheduler == 0)
+    {
+        // printf("I'm the scheduler Process\n"); //<TEST>
+        char n[5], s[5], sw[5], t[5];
+        printf("%d", numProcesses);
+        printf("%d", schedAlgo);
+        printf("%d", switchTime);
+        system("gcc scheduler.c -o scheduler.out"); // Compiling the scheduler file
+        if (schedAlgo == 0)
+        {
+            printf(t, "%d", timeSlice);
+            execl("scheduler.out", "./scheduler.out", n, s, sw, t, NULL); // exchange the current process with the scheduler's & passing it required Arguments
+        }
+        else
+        {
+            execl("scheduler.out", "./scheduler.out", n, s, sw, NULL);
+        }
+    }
+    else
+    {
+
         int shmid = creatShMemory();
 
         void *shmaddr = shmat(shmid, NULL, 0);
@@ -57,7 +117,7 @@ int main(int argc, char *argv[])
             exit(-1);
         }
 
-        printf("\nWriter: Shared memory attached at address %p\n", shmaddr);
+        printf("\nWriter: Shared memory attached at address %d\n", shmid);
         struct QNode *node;
         struct Process *P;
         while (1)
@@ -68,7 +128,7 @@ int main(int argc, char *argv[])
                 P = &node->data;
                 if (P->AT == getClk())
                 {
-
+                    printf("send");
                     memcpy(shmaddr, P, sizeof(struct Process));
                     up(sem2);
                     dequeue(&ProcessQueue, P);
@@ -79,80 +139,9 @@ int main(int argc, char *argv[])
 
         shmdt(shmaddr);
     }
-    else
-    {
 
-        // 1. Read the input files.
-        int numProcesses = readFile(argv[1], &ProcessQueue);
-
-        // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
-        int schedAlgo = -1;
-        int switchTime = -1;
-        int timeSlice = -1; // RR
-
-        do
-        {
-            printf("|| Choose a Scheduling Algorithm ||\n");
-            printf("For RR, Enter 0\nFor SRTF, Enter 1\nFor HPF, Enter 2\nAlgorithm: ");
-            scanf("%d", &schedAlgo);
-            if (schedAlgo != 0 && schedAlgo != 1 && schedAlgo != 2)
-                printf("Invalid Option -> ");
-        } while (schedAlgo != 0 && schedAlgo != 1 && schedAlgo != 2);
-
-        do
-        {
-            printf("|| Enter the Context Switching Time ||\nTime: ");
-            scanf("%d", &switchTime);
-            if (switchTime < 0)
-                printf("\nInvalid Option -> ");
-        } while (switchTime < 0);
-
-        switch (schedAlgo)
-        {
-        case 0:
-        {
-            printf("You've Chosen RR.\n");
-            do
-            {
-                printf("||Enter the Time Slice||\nTime: ");
-                scanf("%d", &switchTime);
-                if (switchTime < 0)
-                    printf("\nInvalid Option -> ");
-            } while (switchTime < 0);
-        }
-        break;
-        default:
-            break;
-        }
-        ///-=========SEND TYPE TO SCHEDULAR =================///
-        schedularmessage.schedType = schedAlgo;
-        int msgid = createMessageQueue();
-        int done;
-        done = msgsnd(msgid, &schedularmessage, sizeof(schedularmessage.schedType), !IPC_NOWAIT);
-
-        if (done == -1)
-        {
-            perror("error in reciving ?");
-        }
-
-        // 3. Initiate and create the scheduler and clock processes.
-        pid_t scheduler = fork();
-        if (scheduler == -1)
-            perror("Error in Forking the Scheduler Process.\n");
-        else if (scheduler == 0)
-        {
-            // printf("I'm the scheduler Process\n"); //<TEST>
-            char n[5], s[5], sw[5], t[5];
-            sprintf(n, "%d", numProcesses);
-            sprintf(s, "%d", schedAlgo);
-            sprintf(sw, "%d", switchTime);
-            sprintf(t, "%d", timeSlice);
-            system("gcc scheduler.c -o scheduler.out");                   // Compiling the scheduler file
-            execl("scheduler.out", "./scheduler.out", n, s, sw, t, NULL); // exchange the current process with the scheduler's & passing it required Arguments
-        }
-        int x;
-        wait(&x); //<TEST>
-    }
+    int x;
+    wait(&x); //<TEST>
 
     // printf("I'm the Generator Process\n"); //Test, To be deleted.
     //  4. Use this function after creating the clock process to initialize clock

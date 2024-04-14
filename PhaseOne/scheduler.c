@@ -72,14 +72,23 @@ int main(int argc, char *argv[])
 {
     // =======Schedular Attribute==========//
 
-    int totalProcessNum = 0;                 // total num of process in the CPU
-    int type;                                // Type of schedular
     struct Process *ActivatedProcess = NULL; // pointer on the ruccing Process
     struct Queue ProcessQueue;               // receved Process from process generator
     struct Queue RR;
+    //===========schedulat attributes========//
+    int timeslice;
+    int numProcesses = atoi(argv[1]); // total num of process in the CPU
+    int type = atoi(argv[2]);
+    int switchTime = atoi(argv[3]); // Type of schedular
 
+    if (argc == 5)
+        timeslice = atoi(argv[4]);
     signal(SIGINT, HandlerINT);
     signal(SIGCHLD, HandlerCHILD);
+
+    printf("%d", numProcesses);
+    printf("%d", type);
+    printf("%d", switchTime);
     int Pid = fork();
     if (Pid != 0)
     {
@@ -137,6 +146,7 @@ int main(int argc, char *argv[])
 
         while (1)
         {
+            printf("sah");
             down(sem2);
             P = ReadProcessInfo(shmid);
             enqueue(&ProcessQueue, *P);

@@ -11,7 +11,10 @@ clean:
 all: clean build
 
 run:
-	./process_generator.out
+	@./process_generator.out ./processes.txt
+
+runclk:
+	@./clk.out
 
 
 test:
