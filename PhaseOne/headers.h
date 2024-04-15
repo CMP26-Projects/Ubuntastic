@@ -2,6 +2,7 @@
 //=============Contents============//
 // Queue Struct
 // Process Struct <MAY BE EDITED>
+// MinHeap Struct <by Ahmed>
 //=================================//
 #include <stdio.h> //if you don't use scanf/printf change this include
 #include <sys/types.h>
@@ -19,7 +20,6 @@
 typedef short bool;
 #define true 1
 #define false 0
-
 #define SHKEY 300
 
 ///==============================
@@ -69,21 +69,33 @@ void destroyClk(bool terminateAll)
 
 struct schdularType
 {
-    int mtype;
+    long mtype;
     int schedType;
 };
 
+
+///////////////////////////////////////
+///// Data Structures Implementation///
+///////////////////////////////////////
+
 //==============Process==============//
+enum processState{
+    STARTED,
+    RESUMED,
+    STOPPED,
+    FINISHED,
+    WAITING
+};
+
 struct Process
 {
     int ID;
-    int BT;
-    int AT;
-    int Priority;
-    int RT;
-    int state; // 0=Started, 1=Resumed, 2=Stopped, 3=Finished
+    int RT; //running time
+    int AT; //arrival time
+    int Priority; 
+    int RemT; //remaining time
+    enum processState state; 
 };
-///////////////////////////////////////
 
 //===============Queue===============//
 // Define the structure for a queue node
@@ -149,6 +161,82 @@ bool dequeue(struct Queue *q, struct Process *p)
     free(temp);
     return 1;
 }
+
+//===============minHeap===============//
+
+struct minHeap 
+{
+    int size ;
+    bool criteria;
+    struct Process* arr;
+};
+
+struct minHeap createMinHeap(int criteria) {
+    struct minHeap heap;
+    heap.size = 0;
+    heap.criteria = criteria;
+    return heap;
+}
+
+bool lessThan(struct Process a, struct Process b, bool criteria)
+{
+    if(criteria==0)
+        return (a.RemT<b.RemT); //for SRTN
+    else
+        return (a.Priority<b.Priority); //for non pre-emitive HPF
+}
+
+
+void insertNode(struct minHeap* heap, struct Process P) 
+{
+    heap->arr = (heap->size==0)? malloc(sizeof(struct Process)):realloc(heap->arr, (heap->size + 1) * sizeof(struct Process));
+    struct Process newProcess = P;
+    int i = (heap->size)++;                                         
+    while(i>0 && lessThan(newProcess, heap->arr[(i-1) / 2], heap->criteria) )   
+    {
+        heap->arr[i] = heap->arr[(i-1) / 2];                         
+        i = (i-1) / 2;                                             
+    }
+    heap->arr[i] = newProcess;
+}
+
+void heapify(struct minHeap* heap, int i)
+{
+    int smallest = i;
+    int left = 2*i+1;
+    int right = 2*i+2;
+    if(left<heap->size && lessThan(heap->arr[left],heap->arr[smallest],heap->criteria)){
+        smallest = left;
+    }
+    if(right<heap->size && lessThan(heap->arr[right],heap->arr[smallest],heap->criteria)){
+        smallest = right;
+    }
+    if(smallest!=i){
+        struct Process temp = heap->arr[i];
+        heap->arr[i] = heap->arr[smallest];
+        heap->arr[smallest] = temp;
+        heapify(heap,smallest);
+    }
+}
+
+struct Process getMin(struct minHeap* heap)
+{
+    return heap->arr[0];
+}
+
+void pop(struct minHeap* heap)
+{
+    if(heap->size==0)
+        return;
+    struct Process temp = heap->arr[0];
+    heap->arr[0] = heap->arr[heap->size-1];
+    heap->size--;
+    heapify(heap,0);
+}
+
+
+//===============Semaphores===============//
+
 union Semun
 {
     int val;

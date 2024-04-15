@@ -20,8 +20,7 @@ void cleanup(int signum)
 /* This file represents the system clock for ease of calculations */
 int main(int argc, char *argv[])
 {
-    // printf("Clock starting\n");
-    printf("sah1");
+    printf("Clock starting\n");
     signal(SIGINT, cleanup);
     int clk = 0;
     // Create shared memory for one integer variable 4 bytes
@@ -38,7 +37,6 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     *shmaddr = clk; /* initialize shared memory */
-    printf("sah");
     while (1)
     {
         sleep(1);

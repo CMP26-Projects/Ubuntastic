@@ -15,6 +15,7 @@ void HandlerCHILD(int signum)
 }
 void generateLogFile()
 {
+    exit(0);
 }
 void generatePrefFile()
 {
@@ -44,7 +45,7 @@ struct Process *ReadProcessInfo(int shmid)
 
     P = (struct Process *)shmaddr;
 
-    printf("the message reseved in : %d %d %d %d  \n", P->AT, P->BT, P->ID, P->Priority);
+    printf("the message reseved in : %d %d %d %d  \n", P->AT, P->RT, P->ID, P->Priority);
 
     strcpy((char *)shmaddr, "quit");
     shmdt(shmaddr);
@@ -70,12 +71,17 @@ int getSchedularType(int msgid)
 
 int main(int argc, char *argv[])
 {
+            // initiate Clock
+        initClk();
+        int x = getClk();
+        printf("Scheduler current time is %d\n", x);
+
     // =======Schedular Attribute==========//
 
     struct Process *ActivatedProcess = NULL; // pointer on the ruccing Process
     struct Queue ProcessQueue;               // receved Process from process generator
     struct Queue RR;
-    //===========schedulat attributes========//
+    //===========schedular attributes========//
     int timeslice;
     int numProcesses = atoi(argv[1]); // total num of process in the CPU
     int type = atoi(argv[2]);
@@ -85,15 +91,14 @@ int main(int argc, char *argv[])
         timeslice = atoi(argv[4]);
     signal(SIGINT, HandlerINT);
     signal(SIGCHLD, HandlerCHILD);
+        printf("hi from sceduler ");
 
-    printf("%d", numProcesses);
-    printf("%d", type);
-    printf("%d", switchTime);
+    //printf("%d", numProcesses);
+    //printf("%d", type);
+    //printf("%d", switchTime);
     int Pid = fork();
     if (Pid != 0)
     {
-        // initiate Clock
-        initClk();
 
         struct QNode *node;
         struct Process *P;
@@ -102,6 +107,7 @@ int main(int argc, char *argv[])
         {
             if (!isEmpty(&ProcessQueue))
             {
+                sleep(2);
                 node = ProcessQueue.front;
                 P = &node->data;
 
@@ -111,6 +117,7 @@ int main(int argc, char *argv[])
 
                 if (Processid == 0)
                 {
+                    //
                     // execl("/process","process",P->BT,NULL);
                 }
                 else
@@ -129,7 +136,7 @@ int main(int argc, char *argv[])
                     }
                     dequeue(&ProcessQueue, P);
                 }
-
+                sleep(5);
                 printf("the process receved : ID :%d  AT: %d\n", P->ID, P->AT);
             }
         }
