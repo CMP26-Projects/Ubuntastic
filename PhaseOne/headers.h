@@ -73,13 +73,13 @@ struct schdularType
     int schedType;
 };
 
-
 ///////////////////////////////////////
 ///// Data Structures Implementation///
 ///////////////////////////////////////
 
 //==============Process==============//
-enum processState{
+enum processState
+{
     STARTED,
     RESUMED,
     STOPPED,
@@ -90,13 +90,18 @@ enum processState{
 struct Process
 {
     int ID;
-    int RT; //running time
-    int AT; //arrival time
-    int Priority; 
-    int RemT; //remaining time
-    enum processState state; 
+    int RT; // running time
+    int AT; // arrival time
+    int Priority;
+    int RemT; // remaining time
+    enum processState state;
 };
 
+struct msgbuf
+{
+    // struct Process *msgProcess;
+    int data[6];
+};
 //===============Queue===============//
 // Define the structure for a queue node
 
@@ -115,6 +120,7 @@ struct Queue
 
 bool isEmpty(struct Queue *q)
 {
+
     return q->front == NULL;
 }
 
@@ -143,6 +149,7 @@ void enqueue(struct Queue *q, struct Process x)
 
 bool dequeue(struct Queue *q, struct Process *p)
 {
+    printf("here from dequeue\n");
     if (q->front == NULL)
     {
         p = NULL;
@@ -156,22 +163,23 @@ bool dequeue(struct Queue *q, struct Process *p)
     {
         q->rear = NULL;
     }
-    (q->count)--;
+    q->count = q->count - 1;
     *p = temp->data;
     free(temp);
-    return 1;
+    return true;
 }
 
 //===============minHeap===============//
 
-struct minHeap 
+struct minHeap
 {
-    int size ;
+    int size;
     bool criteria;
-    struct Process* arr;
+    struct Process *arr;
 };
 
-struct minHeap createMinHeap(int criteria) {
+struct minHeap createMinHeap(int criteria)
+{
     struct minHeap heap;
     heap.size = 0;
     heap.criteria = criteria;
@@ -180,60 +188,61 @@ struct minHeap createMinHeap(int criteria) {
 
 bool lessThan(struct Process a, struct Process b, bool criteria)
 {
-    if(criteria==0)
-        return (a.RemT<b.RemT); //for SRTN
+    if (criteria == 0)
+        return (a.RemT < b.RemT); // for SRTN
     else
-        return (a.Priority<b.Priority); //for non pre-emitive HPF
+        return (a.Priority < b.Priority); // for non pre-emitive HPF
 }
 
-
-void insertNode(struct minHeap* heap, struct Process P) 
+void insertNode(struct minHeap *heap, struct Process P)
 {
-    heap->arr = (heap->size==0)? malloc(sizeof(struct Process)):realloc(heap->arr, (heap->size + 1) * sizeof(struct Process));
+    heap->arr = (heap->size == 0) ? malloc(sizeof(struct Process)) : realloc(heap->arr, (heap->size + 1) * sizeof(struct Process));
     struct Process newProcess = P;
-    int i = (heap->size)++;                                         
-    while(i>0 && lessThan(newProcess, heap->arr[(i-1) / 2], heap->criteria) )   
+    int i = (heap->size)++;
+    while (i > 0 && lessThan(newProcess, heap->arr[(i - 1) / 2], heap->criteria))
     {
-        heap->arr[i] = heap->arr[(i-1) / 2];                         
-        i = (i-1) / 2;                                             
+        heap->arr[i] = heap->arr[(i - 1) / 2];
+        i = (i - 1) / 2;
     }
     heap->arr[i] = newProcess;
 }
 
-void heapify(struct minHeap* heap, int i)
+void heapify(struct minHeap *heap, int i)
 {
     int smallest = i;
-    int left = 2*i+1;
-    int right = 2*i+2;
-    if(left<heap->size && lessThan(heap->arr[left],heap->arr[smallest],heap->criteria)){
+    int left = 2 * i + 1;
+    int right = 2 * i + 2;
+    if (left < heap->size && lessThan(heap->arr[left], heap->arr[smallest], heap->criteria))
+    {
         smallest = left;
     }
-    if(right<heap->size && lessThan(heap->arr[right],heap->arr[smallest],heap->criteria)){
+    if (right < heap->size && lessThan(heap->arr[right], heap->arr[smallest], heap->criteria))
+    {
         smallest = right;
     }
-    if(smallest!=i){
+    if (smallest != i)
+    {
         struct Process temp = heap->arr[i];
         heap->arr[i] = heap->arr[smallest];
         heap->arr[smallest] = temp;
-        heapify(heap,smallest);
+        heapify(heap, smallest);
     }
 }
 
-struct Process getMin(struct minHeap* heap)
+struct Process getMin(struct minHeap *heap)
 {
     return heap->arr[0];
 }
 
-void pop(struct minHeap* heap)
+void pop(struct minHeap *heap)
 {
-    if(heap->size==0)
+    if (heap->size == 0)
         return;
     struct Process temp = heap->arr[0];
-    heap->arr[0] = heap->arr[heap->size-1];
+    heap->arr[0] = heap->arr[heap->size - 1];
     heap->size--;
-    heapify(heap,0);
+    heapify(heap, 0);
 }
-
 
 //===============Semaphores===============//
 

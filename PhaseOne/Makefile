@@ -6,7 +6,7 @@ build:
 	@gcc test_generator.c -o test_generator.out
 
 clean:
-	rm -f *.out  processes.txt
+	@rm -f *.out  processes.txt
 
 all: clean build
 
@@ -23,14 +23,16 @@ test:
 	@gcc scheduler.c -o scheduler.out
 	@gcc test_generator.c -o test_generator.out
 	@./clk.out
-	@./process_generator.out
+	@./process_generator.out 
 	
 	
 
 
 testprocessgen:
+	# @gcc test_generator.c -o test_generator.o
 	@gcc process_generator.c -o process_generator.o
-	@./process_generator.o
+	# @./test_generator.o
+	@./process_generator.o ./processes.txt
 
 
 

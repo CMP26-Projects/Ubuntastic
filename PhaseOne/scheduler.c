@@ -30,25 +30,19 @@ void updateOutfile()
 {
 }
 
-struct Process *ReadProcessInfo(int shmid)
+struct Process *ReadProcessInfo(int shmid, void *shmaddr)
 {
     struct Process *P = (struct Process *)malloc(sizeof(struct Process));
 
-    void *shmaddr = shmat(shmid, (void *)0, 0);
-    if (shmaddr == (void *)-1)
-    {
-        perror("Error in attach in reader");
-        exit(-1);
-    }
-
-    printf("\nReader: Shared memory attached at address %p\n", shmaddr);
+    // printf("\nReader: Shared memory attached at address %p\n", shmaddr);
 
     P = (struct Process *)shmaddr;
 
-    printf("the message reseved in : %d %d %d %d  \n", P->AT, P->RT, P->ID, P->Priority);
+    printf("the message reseved in : %d %d %d %d %d %d \n", P->AT, P->RT, P->ID, P->Priority, P->RemT, P->state);
 
     strcpy((char *)shmaddr, "quit");
-    shmdt(shmaddr);
+    // shmdt(shmaddr);
+
     return P;
 }
 
@@ -71,10 +65,11 @@ int getSchedularType(int msgid)
 
 int main(int argc, char *argv[])
 {
-            // initiate Clock
-        initClk();
-        int x = getClk();
-        printf("Scheduler current time is %d\n", x);
+    printf("hi from sceduler ");
+    // initiate Clock
+    initClk();
+    int x = getClk();
+    printf("Scheduler current time is %d\n", x);
 
     // =======Schedular Attribute==========//
 
@@ -89,13 +84,11 @@ int main(int argc, char *argv[])
 
     if (argc == 5)
         timeslice = atoi(argv[4]);
+
     signal(SIGINT, HandlerINT);
     signal(SIGCHLD, HandlerCHILD);
-        printf("hi from sceduler ");
+    // printf("hi from sceduler ");
 
-    //printf("%d", numProcesses);
-    //printf("%d", type);
-    //printf("%d", switchTime);
     int Pid = fork();
     if (Pid != 0)
     {
@@ -143,21 +136,36 @@ int main(int argc, char *argv[])
     }
     else
     {
-        int sem2;
-        int sem1 = Creatsem(&sem2);
-        // int msgid = createMessageQueue();
-        // type = getSchedularType(msgid);
-        int shmid = creatShMemory();
+        // int sem2;
+        // int sem1 = Creatsem(&sem2);
+        // // int msgid = createMessageQueue();
+        // // type = getSchedularType(msgid);
+        // int shmid = creatShMemory();
+        int msgid = createMessageQueue();
 
         struct Process *P;
-
+        // void *shmaddr = shmat(shmid, (void *)0, 0);
+        // if (shmaddr == (void *)-1)
+        // {
+        //     perror("Error in attach in reader");
+        //     exit(-1);
+        // }
+        struct msgbuf revievingProcess;
         while (1)
         {
-            printf("sah");
-            down(sem2);
-            P = ReadProcessInfo(shmid);
+            printf("el7a2ona tany\n");
+
+            int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess), 0, !IPC_NOWAIT);
+            printf("sah\n");
+            // down(sem2);
+            printf("sah\n");
+            // memcpy(P, shmaddr, sizeof(struct Process));
+            printf("I am herer");
+            // memcpy(P, revievingProcess.msgProcess, sizeof(struct Process));
+            printf("bla bla lolo\n");
+
             enqueue(&ProcessQueue, *P);
-            up(sem1);
+            // up(sem1);
         }
     }
 
