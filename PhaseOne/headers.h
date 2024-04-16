@@ -100,6 +100,7 @@ struct Process
 struct msgbuf
 {
     // struct Process *msgProcess;
+    long mtype;
     int data[6];
 };
 //===============Queue===============//
@@ -127,6 +128,7 @@ bool isEmpty(struct Queue *q)
 void initializeQueue(struct Queue *q)
 {
     q->front = q->rear = NULL;
+    q->count=0;
 }
 
 void enqueue(struct Queue *q, struct Process x)
@@ -147,13 +149,13 @@ void enqueue(struct Queue *q, struct Process x)
     (q->count)++;
 }
 
-bool dequeue(struct Queue *q, struct Process *p)
+bool dequeue(struct Queue *q, struct Process **p)
 {
-    printf("here from dequeue\n");
+    printf("before dequeue : %d \n", q->count);
     if (q->front == NULL)
     {
-        p = NULL;
-        return 0;
+        *p = NULL;
+        return false;
     }
 
     struct QNode *temp = q->front;
@@ -163,10 +165,32 @@ bool dequeue(struct Queue *q, struct Process *p)
     {
         q->rear = NULL;
     }
-    q->count = q->count - 1;
-    *p = temp->data;
+    --(q->count);
+
+    // Allocate memory for p and copy the data from temp->data
+    if(*p == NULL)
+    *p = (struct Process *)malloc(sizeof(struct Process));
+    **p = temp->data;
     free(temp);
+
     return true;
+}
+void printQueue(struct Queue *q)
+{
+    struct QNode *temp = q->front;
+    while (temp != NULL)
+    {
+        printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", temp->data.ID, temp->data.AT, temp->data.RT, temp->data.Priority, temp->data.RemT, temp->data.state);
+        temp = temp->next;
+    }
+}
+void destroyQueue(struct Queue *q)
+{
+    struct Process *p;
+    while (dequeue(q, &p))
+    {
+        free(p);
+    }
 }
 
 //===============minHeap===============//
@@ -243,7 +267,19 @@ void pop(struct minHeap *heap)
     heap->size--;
     heapify(heap, 0);
 }
+void printHeap(struct minHeap *heap)
+{
+    for (int i = 0; i < heap->size; i++)
+    {
+        printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", heap->arr[i].ID, heap->arr[i].AT, heap->arr[i].RT, heap->arr[i].Priority, heap->arr[i].RemT, heap->arr[i].state);
+    }
+}
 
+void destroyHeap(struct minHeap *heap)
+{
+    free(heap->arr);
+    heap->size = 0;
+}
 //===============Semaphores===============//
 
 union Semun

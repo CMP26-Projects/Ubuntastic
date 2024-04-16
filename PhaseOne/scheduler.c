@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
                     {
                         // enqueue(&ProcessQueue, *P);
                     }
-                    dequeue(&ProcessQueue, P);
+                    dequeue(&ProcessQueue, &P);
                 }
                 sleep(5);
                 printf("the process receved : ID :%d  AT: %d\n", P->ID, P->AT);
@@ -156,9 +156,9 @@ int main(int argc, char *argv[])
             printf("el7a2ona tany\n");
 
             int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess), 0, !IPC_NOWAIT);
-            printf("sah\n");
+            //printf("sah\n");
             // down(sem2);
-            printf("sah\n");
+            //printf("sah\n");
             // memcpy(P, shmaddr, sizeof(struct Process));
             printf("I am herer");
             // memcpy(P, revievingProcess.msgProcess, sizeof(struct Process));
