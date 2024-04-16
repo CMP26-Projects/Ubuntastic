@@ -110,9 +110,7 @@ int main(int argc, char *argv[])
     getUserInput(&schedAlgo, &switchTime, &timeSlice);
     
 
-    // 3. Initiate and create the scheduler and clock processes.
-    printf("I'm the Generator Process and I will fork the clock\n"); // Test, To be deleted.
-    
+    // 3. Initiate and create the scheduler and clock processes.    
     pid_t clk = fork();
     if (clk == -1)
     {
@@ -121,14 +119,13 @@ int main(int argc, char *argv[])
     }
     else if (clk == 0)
     {
-        printf("I am the clock processes and I will be created now\n");
         system("gcc clk.c -o clk.out");      // Compiling the clock file
         execl("clk.out", "./clk.out", NULL); // exchange the current process with the clock's
 
         perror("Execl process has failed\n");
         exit(-1);
     }
-    else if(clk < 0)
+    else
     {
         //  4. Use this function after creating the clock process to initialize clock
         initClk();
