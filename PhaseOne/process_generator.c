@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
                 int currTimeStamp = getClk();
                 printf("current time is %d\n", currTimeStamp);
 
-                while (P->AT == currTimeStamp)
+                while (P->AT >= currTimeStamp)
                 {
                     printf("process %d will be sent to the scheduler \n",P->ID);
                     createProcessMessage(sendingProcess,P);
