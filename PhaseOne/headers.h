@@ -21,6 +21,9 @@ typedef short bool;
 #define true 1
 #define false 0
 #define SHKEY 300
+#define SRTN 0
+#define HPF 1
+#define RR 2
 
 ///==============================
 // don't mess with this variable//
@@ -65,13 +68,6 @@ void destroyClk(bool terminateAll)
         killpg(getpgrp(), SIGINT);
     }
 }
-//==============Message Queue =========//
-
-struct schdularType
-{
-    long mtype;
-    int schedType;
-};
 
 ///////////////////////////////////////
 ///// Data Structures Implementation///
@@ -95,13 +91,32 @@ struct Process
     int Priority;
     int RemT; // remaining time
     enum processState state;
+    
 };
+
+struct Process createProcess(int processInfo[])
+{
+
+    struct Process P;
+    P.ID = processInfo[0];
+    P.AT = processInfo[1];
+    P.RT = processInfo[2];
+    P.RemT = processInfo[2];
+    P.Priority = processInfo[3];
+    P.state = WAITING;
+    return P;
+}
+
+void printProcess(struct Process P)
+{
+    printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", P.ID, P.AT, P.RT, P.Priority, P.RemT, P.state);
+}
 
 struct msgbuf
 {
     // struct Process *msgProcess;
     long mtype;
-    int data[6];
+    int data[4];
 };
 //===============Queue===============//
 // Define the structure for a queue node
@@ -151,7 +166,6 @@ void enqueue(struct Queue *q, struct Process x)
 
 bool dequeue(struct Queue *q, struct Process **p)
 {
-    printf("before dequeue : %d \n", q->count);
     if (q->front == NULL)
     {
         *p = NULL;
@@ -202,7 +216,7 @@ struct minHeap
     struct Process *arr;
 };
 
-struct minHeap createMinHeap(int criteria)
+struct minHeap initializeHeap(int criteria)
 {
     struct minHeap heap;
     heap.size = 0;
@@ -218,7 +232,13 @@ bool lessThan(struct Process a, struct Process b, bool criteria)
         return (a.Priority < b.Priority); // for non pre-emitive HPF
 }
 
-void insertNode(struct minHeap *heap, struct Process P)
+bool isEmptyHeap(struct minHeap *heap)
+{
+
+    return heap->size == 0;
+}
+
+void push(struct minHeap *heap, struct Process P)
 {
     heap->arr = (heap->size == 0) ? malloc(sizeof(struct Process)) : realloc(heap->arr, (heap->size + 1) * sizeof(struct Process));
     struct Process newProcess = P;
@@ -323,7 +343,7 @@ void up(int sem)
 int createMessageQueue()
 {
     key_t key_id;
-    int msgid, recval;
+    int msgid;
 
     key_id = ftok("file.txt", 65);
     msgid = msgget(key_id, 0666 | IPC_CREAT);

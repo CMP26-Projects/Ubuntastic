@@ -1,23 +1,20 @@
 #include <stdio.h>
 #include "headers.h"
 
-/* Modify this file as needed*/
-int remainingtime;
-
 int main(int agrc, char *argv[])
 {
-    initClk();
-
     // TODO it needs to get the remaining time from somewhere
-
-    remainingtime = atoi(argv[1]);
-    while (remainingtime > 0)
-    {
-
-        remainingtime--;
+    int processID = atoi(argv[1]);
+    int runTime = atoi(argv[2]);
+    int remainingTime = runTime;
+    initClk();
+    int Time = getClk();
+    printf("Process %d started at %d\n", processID, Time);
+     while (remainingTime>0)
+    {   
+        remainingTime--;
     }
 
     destroyClk(false);
-
-    return 0;
+    exit(processID);
 }
