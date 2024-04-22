@@ -1,4 +1,5 @@
 #include "headers.h"
+#include "scheduler.h"
 #include <stdio.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -7,150 +8,223 @@
 #include <string.h>
 #include <signal.h>
 
+void initializeScheduler(int argc,char** args)
+{    
+    
+    //initalize the scheduler data members
+    sch.Algo=atoi(args[2]); 
+    sch.switchTime=atoi(args[3]);
+    totalProcesses=atoi(args[1]);
+    recievedProcesses=0;
+    finishedProcesses=0;
+    runningProcess=NULL;
+    newProcess=NULL;
+    totalWaitingTime=0;
+    totalWTA=0;
+    pcb=(struct PCB*)malloc(sizeof(struct PCB));
+
+    //instantiate the connection with clk & Process_gen & processes
+    initClk();
+    msgid = createMessageQueue();
+    signal(SIGINT, handlerINT);
+    signal(SIGUSR1, finishProcessHandler);
+    clk_t startTime = getClk();
+    printf("the scheduler has started in time slice : %d\n", startTime);
+}
+
 void handlerINT(int signum)
 {
-    exit(0);
-    // destroyClk(true);
+    //send int signal to all the group to kill them ALL!!
+    kill(getpgrp(),SIGINT);
+    destroyClk(true);
+    exit(-1); //Indicates the unexpected exit and notify the process genetrator 
 }
-void handlerCHILD(int signum)
+void pushIntoConatainer(void*container,int type,struct Process* p){
+ if(type!=RR)
+    push((struct minHeap*)container,*p);
+ else
+    enqueue((struct Queue*)container,*p);
+}
+
+bool checkNewProcesses(void* processContainer)
 {
+        struct msgbuf revievingProcess;
+        struct Process* P;
+        int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess.data), 7, IPC_NOWAIT);
+        if(msgReciver==-1)//The queue is empty: no processes arrive at this timestamp
+            return false;
+        P = createProcess(revievingProcess.data);
+        printf("process %d was sent to the scheduler successfully \n",P->ID);
+        pushIntoConatainer(processContainer,sch.Algo,P);
+        recievedProcesses++;
+        sleep(1);
+        return true; //return the new process
 }
-void stopProcess(int pid)
+
+void startProcess(struct Process* p)
+{    
+    pid_t pid = fork();
+    if (pid == -1)
+    {
+        perror("Error in Forking the New Process.\n");
+        exit(-1);
+    }
+    else if (pid == 0)
+    {
+        char id[5], rt[5];
+        sprintf(id, "%d", p->ID);
+        sprintf(rt, "%d", p->RT);
+        char *args[] = {"process.out", id, rt, (char *)NULL};
+        printf("process %d will be forked\n",p->ID);
+        execv(realpath(args[0],NULL),args);
+        perror("Execl process has failed for creating the process\n");
+        exit(-1);
+    }
+    else
+    {
+        insertPCBSlot(pcb,p,pid);
+    }
+}
+
+void insertPCBSlot(struct PCB * pcb,struct Process* p,pid_t pid)
 {
-    kill(pid, SIGSTOP);
+    updatePCB(pcb,p,STARTED);// should we add another state for the process "arrived"?
+//TODO :implement this function(insert the new process into the PCB with the real UNIX pid and other data memebers)
 }
-void continueProcess(int pid)
+
+struct Process* getProcessByID(pid_t pid){
+    //TODO: implement this function (get the process info using the real time process ID)
+    return NULL;
+}
+
+void stopProcess(struct Process* p)
 {
-    kill(pid, SIGCONT);
+    runningProcess=NULL;
+    updatePCB(pcb,p,STOPPED);
+    updateOutfile(p,STOPPED);
+    kill(getProcessID(p),SIGSTOP);
+    sleep(sch.switchTime);
 }
-void generateLogFile()
+
+void continueProcess(struct Process* p)
 {
-    exit(0);
+    runningProcess=p;
+    if(p->RT==p->RemT)
+        startProcess(p);
+    else
+    {
+        updateOutfile(p,RESUMED);
+        kill(getProcessID(p),SIGCONT);
+    }
 }
+
+void updateOutfile(struct Process *P, enum processState state)
+{
+    //TODO: implement this function(update the log file with the new state of the process and its data members)
+}
+
+pid_t getProcessID(struct Process* P)
+{
+    //TODO:implement this function(loop over the pcb array and return the UNIX pid of the given process)
+}
+
+void updatePCB(struct PCB * pcb,struct Process* P,enum processState Pstate)
+{
+    //TODO: implement this function(update the pcb of this process byy the correct state)
+}
+
 void generatePrefFile()
 {
+    //TODO: implement this function(create the pref file)
 }
-void startProcess()
+
+void finishProcessHandler(int signum)
 {
+    //NOTE: NOT FINISHED YET!!!
+    int status;
+    int pid = wait(&status);
+    int ProcessID=WEXITSTATUS(status);
+    printf("process with id %d has ended \n",ProcessID);
+    struct Process* P=getProcessByID(pid);
+    updatePCB(pcb,P,FINISHED);
+    updateOutfile(P,FINISHED);
+    
+    /* TODO:
+        * Calculate the WTA of the process from the PCB  and the total waiting time using the following formula:
+        * TA = finish time - arrival time
+        * WTA = TA/RT
+        * totalWTA+= getClk()-P->AT;
+        * totalWaitingTime+= waitingtime of the process;
+    */
+    
+    sleep(sch.switchTime);
+    runningProcess=NULL;
+    finishedProcesses++;
+    signal(SIGUSR1,finishProcessHandler);
 }
-void getState()
+
+void SRTN_Algo()
 {
-}
-void updateOutfile(struct Process *P, int state)
-{
-
-}
-
-
-
-
-void SRTN_Algo(int numProcesses, int switchTime){
-    printf("SRTN\n");
+    clk_t startTime=getClk();
     struct minHeap PQ=initializeHeap(SRTN);
-    struct Process P;
-    int msgid = createMessageQueue();
     struct msgbuf revievingProcess;
-    while (1)
-    {
-        int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess.data), 7, !IPC_NOWAIT);
-        P = createProcess(revievingProcess.data);
-        push(&PQ, P);
+    while(finishedProcesses!=totalProcesses){
+        //CHecking for arriving processes
+        while(checkNewProcesses(&PQ))
+        { 
+            printHeap(&PQ);
+        }
+
+        struct Process* shortestProcess=getMin(&PQ);
+        printProcess(*shortestProcess);
+        //No process is running so just run the shortest one if it exists
+        if(runningProcess==NULL)
+        {
+            if(shortestProcess!=NULL)
+            {
+                pop(&PQ);
+                continueProcess(shortestProcess);
+            }
+        }
+        else
+        {
+            //if 
+            if(shortestProcess!=NULL&&runningProcess->RemT>shortestProcess->RemT)
+            {
+                pop(&PQ);
+                push(&PQ,*runningProcess);
+                stopProcess(runningProcess);
+                continueProcess(shortestProcess);
+            }  
+        }
+        
     }
-    printf("the heap is : \n");
-    printHeap(&PQ);
-    // while (!isEmptyHeap(&PQ))
-    // {
-    //     P = getMin(&PQ);
-    //     int Processid = fork();
-    //     if (Processid == -1)
-    //         perror("there is an error in forking ");
-    //     if (Processid == 0)
-    //     {
-    //         // execl("/process","process",P->BT,NULL);
-    //     }
-    //     else
-    //     {
-    //         pop(&PQ);
-    //     }
-    // }
-    printf("the scheduler has finished in time : %d\n", getClk());
+    int totalElapsedtime = getClk()-startTime;
+    printf("the scheduler has finished in time : %d\n", totalElapsedtime);
     destroyHeap(&PQ);
 }
-
-void HPF_Algo(int numProcesses, int switchTime){
+void HPF_Algo()
+{
     printf("HPF\n");
     struct minHeap PQ=initializeHeap(HPF);
-    struct Process P;
-    int msgid = createMessageQueue();
     struct msgbuf revievingProcess;
-    printf("the number of processes is : %d\n", numProcesses);
-    while (1)
-    {
-        int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess.data), 7, !IPC_NOWAIT);
-        P = createProcess(revievingProcess.data);
-        push(&PQ, P);
-        printProcess(PQ.arr[(P.ID)-1]);
-    }
-    // while (!isEmptyHeap(&PQ))
-    // {
-    //     P = getMin(&PQ);
-    //     int Processid = fork();
-    //     if (Processid == -1)
-    //         perror("there is an error in forking ");
-    //     if (Processid == 0)
-    //     {
-    //         char *args[] = {"process.out", P.ID,P.RT, (char *)NULL};
-    //         execv(realpath("process.out",NULL),args);
-    //         perror("Execl process has failed for creating the process\n");
-    //         exit(-1);
-    //     }
-    //     else
-    //     {
-    //         pop(&PQ);
-    //     }
-    // }
+    printf("the number of processes is : %d\n", totalProcesses);
+    
+    ////////////Scheduling Algo implementation//////////////
+
     printf("the scheduler has finished in time : %d\n", getClk());
     destroyHeap(&PQ);
 }
-void RR_Algo(int numProcesses, int switchTime, char *timeSlice){
+void RR_Algo(char* timeSlice)
+{
     printf("RR\n");
     struct Queue ProcessQueue;
     struct Process P;
     struct msgbuf revievingProcess;
-    initializeQueue(&ProcessQueue);
-    int msgid = createMessageQueue();    
-    printf("the number of processes is : %d\n", numProcesses);
-    while (1)
-    {
-        int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess.data), 7, !IPC_NOWAIT);
-        P = createProcess(revievingProcess.data);
-        enqueue(&ProcessQueue, P);
-        // printProcess(P);
-        struct Process *tmp;
-        dequeue(&ProcessQueue, &tmp);
-        printProcess(*tmp);
-        //printf("recievedProcesses : %d\n", recievedProcesses);
-        //ProcessQueue.front=ProcessQueue.front->next;
-    }
+    initializeQueue(&ProcessQueue);    
+    printf("the number of processes is : %d\n", totalProcesses);
 
-    // while (!isEmpty(&ProcessQueue))
-    // {
-    //     struct QNode *node;
-    //     struct Process *P;
-    //     node = ProcessQueue.front;
-    //     P = &node->data;
-    //     int Processid = fork();
-    //     if (Processid == -1)
-    //         perror("there is an error in forking ");
-    //     if (Processid == 0)
-    //     {
-    //         // execl("/process","process",P->BT,NULL);
-    //     }
-    //     else
-    //     {
-    //         dequeue(&ProcessQueue, &P);
-    //     }
-    // }
+    ////////////Scheduling Algo implementation//////////////
 
     printf("the scheduler has finished in time : %d\n", getClk());
     destroyQueue(&ProcessQueue);
@@ -158,127 +232,24 @@ void RR_Algo(int numProcesses, int switchTime, char *timeSlice){
 
 int main(int argc, char *argv[])
 {
-    // initiate Clock
-    initClk();
-    int clock = getClk();
-
     // =======Initializing Scheduler========== //
-    int numProcesses = atoi(argv[1]); // total num of process in the CPU
-    int type = atoi(argv[2]);// type of scheduler
-    int switchTime = atoi(argv[3]); 
-
-    system("gcc process.c -o process.out");          //Testing 
-
-    signal(SIGINT, handlerINT);
-    signal(SIGCHLD, handlerCHILD);    
-    printf("the scheduler has started in time slice : %d\n", clock);
-    switch(type){
+    initializeScheduler(argc,argv);
+    switch(sch.Algo){
     case SRTN:
-        SRTN_Algo(numProcesses,switchTime);
+        SRTN_Algo();
         break;
     case HPF:
-        HPF_Algo(numProcesses,switchTime);
+        HPF_Algo();
         break;
     case RR:
-        RR_Algo(numProcesses,switchTime,(argv[4]));
+        RR_Algo((argv[4]));
         break;
     default:
         printf("Invalid Scheduler Type\n");
+        exit(-1);
         break;
     }
-    int totalElapsedtime = getClk();
-    printf("the scheduler has finished in time : %d\n", totalElapsedtime);
     generatePrefFile();
     destroyClk(true);
-    exit(numProcesses);
+    //TODO : deallocate the PCB
 }
-    // int Pid = fork();
-    // if (Pid != 0)
-    // {
-
-    //     struct QNode *node;
-    //     struct Process *P;
-
-    //     while (1)
-    //     {
-    //         if (!isEmpty(&ProcessQueue))
-    //         {
-    //             sleep(2);
-    //             node = ProcessQueue.front;
-    //             P = &node->data;
-
-    //             int Processid = fork();
-    //             if (Processid == -1)
-    //                 perror("there is an error in forking ");
-
-    //             if (Processid == 0)
-    //             {
-    //                 //
-    //                 // execl("/process","process",P->BT,NULL);
-    //             }
-    //             else
-    //             {
-    //                 if (type == 1)
-    //                 {
-    //                     // enqueue(&ProcessQueue, *P);
-    //                 }
-    //                 else if (type == 2)
-    //                 {
-    //                     // enqueue(&ProcessQueue, *P);
-    //                 }
-    //                 else
-    //                 {
-    //                     // enqueue(&ProcessQueue, *P);
-    //                 }
-    //                 dequeue(&ProcessQueue, &P);
-    //             }
-    //             sleep(5);
-    //             printf("the process receved : ID :%d  AT: %d\n", P->ID, P->AT);
-    //         }
-    //     }
-    // }
-    // else
-    // {
-    //     // int sem2;
-    //     // int sem1 = Creatsem(&sem2);
-    //     // // int msgid = createMessageQueue();
-    //     // // type = getSchedulerType(msgid);
-    //     // int shmid = creatShMemory();
-    //     int msgid = createMessageQueue();
-
-    //     struct Process *P;
-    //     // void *shmaddr = shmat(shmid, (void *)0, 0);
-    //     // if (shmaddr == (void *)-1)
-    //     // {
-    //     //     perror("Error in attach in reader");
-    //     //     exit(-1);
-    //     // }
-    //     struct msgbuf revievingProcess;
-    //     while (1)
-    //     {
-    //         printf("el7a2ona tany\n");
-
-    //         int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess), 0, !IPC_NOWAIT);
-    //         //printf("sah\n");
-    //         // down(sem2);
-    //         //printf("sah\n");
-    //         // memcpy(P, shmaddr, sizeof(struct Process));
-    //         printf("I am herer");
-    //         // memcpy(P, revievingProcess.msgProcess, sizeof(struct Process));
-    //         printf("bla bla lolo\n");
-
-    //         enqueue(&ProcessQueue, *P);
-    //         // up(sem1);
-    //     }
-    // }
-
-    // // Signals Handlers
-
-    // /// get type of schedular from process_generator using message queue
-
-    // // TODO implement the scheduler :)
-    // // upon termination release the clock resources.
-
-    // // destroyClk(true);
-//     return 0;
-// }

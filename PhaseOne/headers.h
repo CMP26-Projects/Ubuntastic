@@ -17,10 +17,11 @@
 #include <unistd.h>
 #include <signal.h>
 
+typedef int clk_t;
 typedef short bool;
 #define true 1
 #define false 0
-#define SHKEY 300
+#define SHKEY 30000
 #define SRTN 0
 #define HPF 1
 #define RR 2
@@ -30,7 +31,7 @@ typedef short bool;
 int *shmaddr; //
 //===============================
 
-int getClk()
+clk_t getClk()
 {
     return *shmaddr;
 }
@@ -39,6 +40,12 @@ int getClk()
  * All process call this function at the beginning to establish communication between them and the clock module.
  * Again, remember that the clock is only emulation!
  */
+struct msgbuf
+{
+    long mtype;
+    int data[4];
+};
+
 void initClk()
 {
     int shmid = shmget(SHKEY, 4, 0444);
@@ -91,19 +98,26 @@ struct Process
     int Priority;
     int RemT; // remaining time
     enum processState state;
-    
 };
 
-struct Process createProcess(int processInfo[])
-{
+struct PCB{};
 
-    struct Process P;
-    P.ID = processInfo[0];
-    P.AT = processInfo[1];
-    P.RT = processInfo[2];
-    P.RemT = processInfo[2];
-    P.Priority = processInfo[3];
-    P.state = WAITING;
+struct scheduler{
+    int Algo;
+    int switchTime;
+    int timeSlice;
+    //TODO: add any necessary data members
+};
+
+struct Process* createProcess(int processInfo[])
+{
+    struct Process* P=(struct Process*)malloc(sizeof(struct Process));
+    P->ID = processInfo[0];
+    P->AT = processInfo[1];
+    P->RT = processInfo[2];
+    P->RemT = processInfo[2];
+    P->Priority = processInfo[3];
+    P->state = WAITING;
     return P;
 }
 
@@ -112,12 +126,7 @@ void printProcess(struct Process P)
     printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", P.ID, P.AT, P.RT, P.Priority, P.RemT, P.state);
 }
 
-struct msgbuf
-{
-    // struct Process *msgProcess;
-    long mtype;
-    int data[4];
-};
+
 //===============Queue===============//
 // Define the structure for a queue node
 
@@ -273,9 +282,9 @@ void heapify(struct minHeap *heap, int i)
     }
 }
 
-struct Process getMin(struct minHeap *heap)
+struct Process* getMin(struct minHeap *heap)
 {
-    return heap->arr[0];
+    return &heap->arr[0];
 }
 
 void pop(struct minHeap *heap)
@@ -345,7 +354,7 @@ int createMessageQueue()
     key_t key_id;
     int msgid;
 
-    key_id = ftok("file.txt", 65);
+    key_id = ftok("example.txt", 65);
     msgid = msgget(key_id, 0666 | IPC_CREAT);
 
     if (msgid == -1)

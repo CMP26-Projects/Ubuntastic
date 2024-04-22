@@ -48,7 +48,6 @@ void getUserInput(int *schedAlgo, int *switchTime, int *timeSlice)
     printf("|| Choose a Scheduling Algorithm ||\n");
     printf("For SRTN, Enter 0\nFor HPF, Enter 1\nFor RR, Enter 2\nAlgorithm: ");
     scanf("%d", schedAlgo);
-    printf("schedAlgo: %d\n", *schedAlgo);
     if (*schedAlgo> 2)
     {
         printf("Invalid Option ->\n");
@@ -113,7 +112,7 @@ int main(int argc, char *argv[])
     }
     else if (clk == 0)
     {
-        system("gcc clk.c -o clk.out");      // Compiling the clock file
+        char command[200];
         execl("clk.out", "./clk.out", NULL); // exchange the current process with the clock's
         perror("Execl process has failed\n");
         exit(-1);
@@ -122,7 +121,7 @@ int main(int argc, char *argv[])
     {
         //  4. Use this function after creating the clock process to initialize clock
         initClk();
-        int time = getClk();
+        clk_t time = getClk();
         pid_t scheduler = fork();
         if (scheduler == -1)
         {
@@ -131,61 +130,43 @@ int main(int argc, char *argv[])
         }
         else if (scheduler == 0)
         {
-            system("gcc scheduler.c -o scheduler.out");                       // Compiling the scheduler file
             char n[5], s[5], sw[5], t[5];
             sprintf(n, "%d", numProcesses);
             sprintf(s, "%d", schedAlgo);
             sprintf(sw, "%d", switchTime);
             sprintf(t, "%d", timeSlice);
             char *args[] = {"scheduler.out", n, s, sw, t, (char *)NULL};
-            execv(realpath("scheduler.out",NULL),args);
+            execv(realpath(args[0],NULL),args);
             perror("Execl process has failed for creating the scheduler\n");
             exit(-1);
         }
         else
         {
             //  4. Use this function after creating the clock process to initialize clock To get time use this
-            int cuurTimeStamp = getClk();
-
             int msgid = createMessageQueue();
-
-            // processesShmAddr = shmat(processesShmID, (void *)0, 0);
-            // if (processesShmAddr == (void *)-1)
-            // {
-            //     perror("Error in attach in process_generator");
-            //     exit(-1);
-            // }
-            //printf("\nProcess_generator: Shared memory attached at address %d\n", processesShmID);
-
-            
-            
             // 6. Send the information to the scheduler at the appropriate time.
             struct Process *P=NULL;
             struct msgbuf sendingProcess;
             while (!isEmpty(&ProcessQueue))
             {
-                int currTimeStamp = getClk();
+                clk_t currTimeStamp = getClk();
                 P = &ProcessQueue.front->data;
                 if(P->AT<=currTimeStamp)
                 {
                     sendingProcess=createProcessMessage(P);
                     int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data), IPC_NOWAIT);
-                    printf("process %d was sent to the scheduler successfully \n",P->ID);
                     dequeue(&ProcessQueue, &P);
                 }
             }
-            waitpid(scheduler, NULL, 0);                    
         }
     }
+    return 0;
 }
 void clearResources(int signum) // may not be complete. will be edited if something is missing <MAY BE EDITED>
 {
     // TODO Clears all resources in case of interruption
     shmdt(processesShmAddr);
     shmctl(processesShmID, IPC_RMID, NULL);
-    printf("\nebl3\n"); //<TEST>
-    destroyClk(true);
-    killpg(getpgrp(), SIGKILL);
-    killpg(getpgrp(), SIGINT);
+    //destroyClk(true);
     exit(-1);
 }
