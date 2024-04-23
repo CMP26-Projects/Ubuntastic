@@ -39,6 +39,7 @@ void handlerINT(int signum)
     destroyClk(true);
     exit(-1); //Indicates the unexpected exit and notify the process genetrator 
 }
+
 void pushIntoConatainer(void*container,int type,struct Process* p){
  if(type!=RR)
     push((struct minHeap*)container,*p);
@@ -85,23 +86,34 @@ void startProcess(struct Process* p)
         insertPCBSlot(pcb,p,pid);
     }
 }
-
+//
 void insertPCBSlot(struct PCB * pcb,struct Process* p,pid_t pid)
 {
-    updatePCB(pcb,p,STARTED);// should we add another state for the process "arrived"?
-//TODO :implement this function(insert the new process into the PCB with the real UNIX pid and other data memebers)
+    pcb[p->ID].pid=pid;
+    updatePCB(pcb,p,STARTED); //to be changed in phase2
 }
 
 struct Process* getProcessByID(pid_t pid){
     //TODO: implement this function (get the process info using the real time process ID)
-    return NULL;
+    struct Process *p =malloc(sizeof(struct Process));
+        for(int i=0;i<recievedProcesses;i++)
+            if(pcb[i].pid==pid)
+            {
+                p->AT=pcb[i].AT;
+                p->ID=pcb[i].id;
+                p->Priority=pcb[i].Priority;
+                p->RemT=pcb[i].RemT;
+                p->RT=pcb[i].RT;
+                p->state=pcb[i].state;
+                return p;
+            }
 }
 
 void stopProcess(struct Process* p)
 {
     runningProcess=NULL;
     updatePCB(pcb,p,STOPPED);
-    updateOutfile(p,STOPPED);
+    updateOutfile(p);
     kill(getProcessID(p),SIGSTOP);
     sleep(sch.switchTime);
 }
@@ -110,32 +122,112 @@ void continueProcess(struct Process* p)
 {
     runningProcess=p;
     if(p->RT==p->RemT)
-        startProcess(p);
+        startProcess(p); 
     else
     {
-        updateOutfile(p,RESUMED);
+        updateOutfile(p);
         kill(getProcessID(p),SIGCONT);
     }
 }
 
-void updateOutfile(struct Process *P, enum processState state)
+void updateOutfile(struct Process* p)
 {
-    //TODO: implement this function(update the log file with the new state of the process and its data members)
+    FILE *file=fopen("/Files/Scheduler.log",'a');
+    if(!file)
+        {
+            printf("Error in Opening the file. . ");
+            return;
+        }
+    struct PCB thisProcessPCB=pcb[p->ID];
+    char st[10];
+    switch (thisProcessPCB.state)
+    {
+    case STARTED:
+        strcpy(st,"started");
+        break;
+    case ARRIVED:
+        strcpy(st,"arrived");
+        break;
+    case STOPPED:
+        strcpy(st,"stopped");
+        break;
+    case FINISHED:
+        strcpy(st,"finished");
+        break;
+    case RESUMED:
+        strcpy(st,"resumed");
+        break;
+    }
+    fprintf(file, "AT time %d process %d %s total %d remain %d wait %d",getClk(), p->ID,st,p->RT,thisProcessPCB.RemT,getClk()-thisProcessPCB.WT);
+    if(thisProcessPCB.state==FINISHED)
+        {
+            int TA=getClk()-thisProcessPCB.AT;
+            int WTA=(getClk()-thisProcessPCB.AT)/thisProcessPCB.RT;
+            int WT=thisProcessPCB.WT;
+            totalWaitingTime+=WT;
+            totalWTA+=WTA;
+            fprintf(file," TA %d WTA %d",TA,WTA);
+        }
+        fprintf(file,"\n");
+    fclose(file);
 }
 
-pid_t getProcessID(struct Process* P)
+pid_t getProcessID(struct Process* p)
 {
-    //TODO:implement this function(loop over the pcb array and return the UNIX pid of the given process)
+    return pcb[p->ID].pid;
 }
 
-void updatePCB(struct PCB * pcb,struct Process* P,enum processState Pstate)
+void updatePCB(struct PCB * pcb,struct Process* p,enum processState Pstate) 
 {
-    //TODO: implement this function(update the pcb of this process byy the correct state)
+    //for phase 1 -> ARRIVED==STARTED (since this function is only invoked if the process is about to get executed)
+    //there's not a case where the process can
+    int index=p->ID;
+    switch (Pstate)
+    {
+    // case ARRIVED:
+    // //case WAITING: (phase2)
+    //     {
+    //         pcb[index].id=index;
+    //         pcb[index].state=Pstate;
+    //         pcb[index].AT=p->AT;
+    //         pcb[index].RemT=(p->RT);
+    //         pcb[index].RT=p->RT;
+    //         pcb[index].state=Pstate;
+    //         pcb[index].Priority=p->Priority;
+    //     }
+    //     break;
+    case STARTED:
+    {
+            pcb[index].id=index;
+            pcb[index].AT=p->AT;
+            pcb[index].RemT=(p->RT)-1;
+            pcb[index].RT=p->RT;
+            pcb[index].Priority=p->Priority;
+        break;
+    }
+    case RESUMED:
+        {
+            pcb[index].RemT -=1;
+        }
+        break;
+    }
+    pcb[index].state=Pstate;
+    pcb[index].WT=getClk()-pcb[index].AT-pcb[index].RT-pcb[index].RemT;
+}
+
+void generateLogFile()
+{
+    FILE *file=fopen("/Files/Scheduler.log",'w');
+    if(!file)
+        printf("Error in Creating the file. . ");
 }
 
 void generatePrefFile()
 {
-    //TODO: implement this function(create the pref file)
+    FILE *file=fopen("/Files/Scheduler.pref",'w');
+    if(!file)
+        return 1;
+    // fprintf(file,"CPU utilization= %f%%\n",float(totalProcessingTime*100/getClk())); ytm noom
 }
 
 void finishProcessHandler(int signum)
@@ -147,7 +239,7 @@ void finishProcessHandler(int signum)
     printf("process with id %d has ended \n",ProcessID);
     struct Process* P=getProcessByID(pid);
     updatePCB(pcb,P,FINISHED);
-    updateOutfile(P,FINISHED);
+    updateOutfile(P);
     
     /* TODO:
         * Calculate the WTA of the process from the PCB  and the total waiting time using the following formula:
@@ -169,7 +261,7 @@ void SRTN_Algo()
     struct minHeap PQ=initializeHeap(SRTN);
     struct msgbuf revievingProcess;
     while(finishedProcesses!=totalProcesses){
-        //CHecking for arriving processes
+        //Checking for arriving processes
         while(checkNewProcesses(&PQ))
         { 
             printHeap(&PQ);
@@ -203,6 +295,7 @@ void SRTN_Algo()
     printf("the scheduler has finished in time : %d\n", totalElapsedtime);
     destroyHeap(&PQ);
 }
+
 void HPF_Algo()
 {
     printf("HPF\n");
@@ -215,6 +308,7 @@ void HPF_Algo()
     printf("the scheduler has finished in time : %d\n", getClk());
     destroyHeap(&PQ);
 }
+
 void RR_Algo(char* timeSlice)
 {
     printf("RR\n");

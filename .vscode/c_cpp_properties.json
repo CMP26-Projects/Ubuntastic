@@ -6,7 +6,7 @@
                 "${workspaceFolder}/**",
                 "/usr/include/x86_64-linux-gnu"
             ],
-            "compilerPath": "C:/MinGW/bin/gcc.exe",
+            "compilerPath": "/usr/bin/g++",
             "cStandard": "${default}",
             "cppStandard": "${default}",
             "intelliSenseMode": "windows-gcc-x86",

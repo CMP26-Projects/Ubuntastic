@@ -1,11 +1,3 @@
-// Author: Somia
-//=============Contents============//
-// readFile()
-// clearResources
-// Scheduler Forking
-// Clock Forking
-//=================================//
-
 #include <string.h>
 #include <signal.h>
 #include "headers.h"

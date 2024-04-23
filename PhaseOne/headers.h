@@ -1,8 +1,3 @@
-// Author: Somia
-//=============Contents============//
-// Queue Struct
-// Process Struct <MAY BE EDITED>
-// MinHeap Struct <by Ahmed>
 //=================================//
 #include <stdio.h> //if you don't use scanf/printf change this include
 #include <sys/types.h>
@@ -81,8 +76,10 @@ void destroyClk(bool terminateAll)
 ///////////////////////////////////////
 
 //==============Process==============//
+
 enum processState
-{
+{   
+    ARRIVED,
     STARTED,
     RESUMED,
     STOPPED,
@@ -100,7 +97,16 @@ struct Process
     enum processState state;
 };
 
-struct PCB{};
+struct PCB{
+    pid_t pid; //real Unix pid
+    int id; // id of incoming process
+    int RT; // running time
+    int AT; // arrival time
+    int Priority;
+    int RemT; // remaining time
+    int WT;
+    enum processState state;
+};
 
 struct scheduler{
     int Algo;
@@ -125,7 +131,6 @@ void printProcess(struct Process P)
 {
     printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", P.ID, P.AT, P.RT, P.Priority, P.RemT, P.state);
 }
-
 
 //===============Queue===============//
 // Define the structure for a queue node
@@ -198,6 +203,7 @@ bool dequeue(struct Queue *q, struct Process **p)
 
     return true;
 }
+
 void printQueue(struct Queue *q)
 {
     struct QNode *temp = q->front;
@@ -207,6 +213,7 @@ void printQueue(struct Queue *q)
         temp = temp->next;
     }
 }
+
 void destroyQueue(struct Queue *q)
 {
     struct Process *p;
@@ -296,6 +303,7 @@ void pop(struct minHeap *heap)
     heap->size--;
     heapify(heap, 0);
 }
+
 void printHeap(struct minHeap *heap)
 {
     for (int i = 0; i < heap->size; i++)

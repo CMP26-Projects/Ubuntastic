@@ -9,6 +9,7 @@ struct Process* runningProcess;
 struct Process* newProcess;
 int totalWaitingTime;
 int totalWTA;
+int totalProcessingTime;
 
 //Functions definition
 void initializeScheduler();
@@ -16,15 +17,16 @@ void handlerINT(int);
 bool checkNewProcesses(void* container);
 void pushIntoConatainer(void*,int,struct Process*);
 void startProcess(struct Process*);
-void insertPCBSlot(struct PCB*,struct Process*,pid_t);
+void insertPCBSlot(struct PCB*,struct Process*,pid_t);             //
 struct Process* getProcessByID(pid_t);
 void stopProcess(struct Process*);
 void continueProcess(struct Process*);
-void updateOutfile(struct Process*, enum processState);
+void updateOutfile(struct Process*);
 pid_t getProcessID(struct Process*);
-void updatePCB(struct PCB *,struct Process*,enum processState);
-void finishProcessHandler(int);
-void generateLogFile();
+void updatePCB(struct PCB *,struct Process*,enum processState);    //
+void finishProcessHandler(int); 
+void generateLogFile(); //
+void generatePrefFile();
 void SRTN_Algo();
 void HPF_Algo();
 void RR_Algo(char*);
