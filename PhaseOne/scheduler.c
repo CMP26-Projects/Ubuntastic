@@ -34,6 +34,7 @@ void initializeScheduler(int argc,char** args)
 
 void handlerINT(int signum)
 {
+    printf("ckock Destroyes\n");
     //send int signal to all the group to kill them ALL!!
     kill(getpgrp(),SIGINT);
     destroyClk(true);
@@ -49,11 +50,12 @@ void pushIntoConatainer(void*container,int type,struct Process* p){
 
 bool checkNewProcesses(void* processContainer)
 {
+        printf("inside the checkNewProcesses\n");
         struct msgbuf revievingProcess;
         struct Process* P;
         int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess.data), 7, IPC_NOWAIT);
         if(msgReciver==-1)//The queue is empty: no processes arrive at this timestamp
-            return false;
+            {printf("no process arrived\n"); return false;}
         P = createProcess(revievingProcess.data);
         printf("process %d was sent to the scheduler successfully \n",P->ID);
         pushIntoConatainer(processContainer,sch.Algo,P);
@@ -125,6 +127,9 @@ void continueProcess(struct Process* p)
         startProcess(p); 
     else
     {
+        updatePCB(pcb,p,RESUMED);
+        if(pcb[p->ID].RemT<=0)
+            updatePCB(pcb,p,FINISHED);
         updateOutfile(p);
         kill(getProcessID(p),SIGCONT);
     }
@@ -132,7 +137,7 @@ void continueProcess(struct Process* p)
 
 void updateOutfile(struct Process* p)
 {
-    FILE *file=fopen("/Files/Scheduler.log",'a');
+    FILE *file=fopen("/Files/Scheduler.log","a");
     if(!file)
         {
             printf("Error in Opening the file. . ");
@@ -160,14 +165,9 @@ void updateOutfile(struct Process* p)
     }
     fprintf(file, "AT time %d process %d %s total %d remain %d wait %d",getClk(), p->ID,st,p->RT,thisProcessPCB.RemT,getClk()-thisProcessPCB.WT);
     if(thisProcessPCB.state==FINISHED)
-        {
-            int TA=getClk()-thisProcessPCB.AT;
-            int WTA=(getClk()-thisProcessPCB.AT)/thisProcessPCB.RT;
-            int WT=thisProcessPCB.WT;
-            totalWaitingTime+=WT;
-            totalWTA+=WTA;
-            fprintf(file," TA %d WTA %d",TA,WTA);
-        }
+    {
+        fprintf(file," TA %d WTA %d",p->TAT,p->WTA);
+    }
         fprintf(file,"\n");
     fclose(file);
 }
@@ -196,38 +196,43 @@ void updatePCB(struct PCB * pcb,struct Process* p,enum processState Pstate)
     //         pcb[index].Priority=p->Priority;
     //     }
     //     break;
-    case STARTED:
-    {
+        case STARTED:
+        {
             pcb[index].id=index;
             pcb[index].AT=p->AT;
             pcb[index].RemT=(p->RT)-1;
             pcb[index].RT=p->RT;
             pcb[index].Priority=p->Priority;
-        break;
-    }
-    case RESUMED:
+            break;
+        }
+        case RESUMED:
         {
             pcb[index].RemT -=1;
+            break;
         }
-        break;
+        case FINISHED:
+        {
+            
+        }
     }
     pcb[index].state=Pstate;
     pcb[index].WT=getClk()-pcb[index].AT-pcb[index].RT-pcb[index].RemT;
 }
 
-void generateLogFile()
-{
-    FILE *file=fopen("/Files/Scheduler.log",'w');
-    if(!file)
-        printf("Error in Creating the file. . ");
-}
 
 void generatePrefFile()
 {
-    FILE *file=fopen("/Files/Scheduler.pref",'w');
+    FILE *file=fopen("/Files/Scheduler.pref","w");
     if(!file)
-        return 1;
-    // fprintf(file,"CPU utilization= %f%%\n",float(totalProcessingTime*100/getClk())); ytm noom
+        printf("can't open the file\n");
+    float cpuUtil = (totalProcessingTime / getClk()) * 100;
+    float StdWTA = (float)sqrt(totalWTA/ (float)(totalProcesses - 1));
+    
+    fprintf(file, "CPU utilization = %.2f %%\n", cpuUtil);
+    fprintf(file, "Avg WTA = %.2f\n", totalWTA/totalProcesses);
+    fprintf(file, "Avg Waiting = %.2f\n", totalWaitingTime/totalProcesses);
+    fprintf(file, "Std WTA = %.2f\n", StdWTA);
+    fclose(file);
 }
 
 void finishProcessHandler(int signum)
@@ -238,7 +243,12 @@ void finishProcessHandler(int signum)
     int ProcessID=WEXITSTATUS(status);
     printf("process with id %d has ended \n",ProcessID);
     struct Process* P=getProcessByID(pid);
+    P->state=FINISHED;
     updatePCB(pcb,P,FINISHED);
+    P->TAT=getClk()-P->AT;
+    P->WTA=P->TAT / P->RT;
+    totalWaitingTime+=P->TAT-P->RT;
+    totalWTA+= getClk()-P->AT;
     updateOutfile(P);
     
     /* TODO:
@@ -248,7 +258,7 @@ void finishProcessHandler(int signum)
         * totalWTA+= getClk()-P->AT;
         * totalWaitingTime+= waitingtime of the process;
     */
-    
+
     sleep(sch.switchTime);
     runningProcess=NULL;
     finishedProcesses++;
@@ -300,11 +310,25 @@ void HPF_Algo()
 {
     printf("HPF\n");
     struct minHeap PQ=initializeHeap(HPF);
+    printHeap(&PQ);
     struct msgbuf revievingProcess;
     printf("the number of processes is : %d\n", totalProcesses);
     
     ////////////Scheduling Algo implementation//////////////
-
+    while(finishedProcesses < totalProcesses)
+    {
+        printf("Time in scheduler: %d\n",getClk());
+        struct Process* topPriority = runningProcess;
+        while(checkNewProcesses(&PQ)){}
+        if(!runningProcess || runningProcess && runningProcess->RemT==0)
+            if(topPriority=getMin(&PQ))
+            {
+                pop(&PQ);
+                printProcess(*topPriority); //test
+            }
+        runningProcess=topPriority;
+        continueProcess(runningProcess);
+    }
     printf("the scheduler has finished in time : %d\n", getClk());
     destroyHeap(&PQ);
 }

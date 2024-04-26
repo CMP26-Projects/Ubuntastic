@@ -9,7 +9,6 @@ int readFile(char *filePath, struct Queue *Pqueue)
 {
     int numProcesses = 0;
     initializeQueue(Pqueue);
-    printf("queue size is : %d \n", Pqueue->count);
 
     int id, bt, at, pri;
     char dummy[100];
@@ -28,6 +27,7 @@ int readFile(char *filePath, struct Queue *Pqueue)
         numProcesses++;
     }
     fclose(inputFile);
+    printf("queue size is : %d \n", Pqueue->count);
     printf("Number of Processes: %d\n", numProcesses);
     return numProcesses;
 }
@@ -141,17 +141,21 @@ int main(int argc, char *argv[])
             struct msgbuf sendingProcess;
             while (!isEmpty(&ProcessQueue))
             {
-                clk_t currTimeStamp = getClk();
+                printf("Time in generator: %d\n",getClk());
+                int currTime=getClk();
+                int currTimeStamp = getClk();
                 P = &ProcessQueue.front->data;
-                if(P->AT<=currTimeStamp)
+                if(P->AT==currTimeStamp)
                 {
+                    printf("process is being sent");
                     sendingProcess=createProcessMessage(P);
                     int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data), IPC_NOWAIT);
                     dequeue(&ProcessQueue, &P);
                 }
+                while(getClk()==currTime){}
             }
         }
-    }
+    }   
     return 0;
 }
 void clearResources(int signum) // may not be complete. will be edited if something is missing <MAY BE EDITED>
@@ -159,6 +163,6 @@ void clearResources(int signum) // may not be complete. will be edited if someth
     // TODO Clears all resources in case of interruption
     shmdt(processesShmAddr);
     shmctl(processesShmID, IPC_RMID, NULL);
-    //destroyClk(true);
+    destroyClk(true);
     exit(-1);
 }

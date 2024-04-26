@@ -12,6 +12,8 @@ int shmid;
 /* Clear the resources before exit */
 void cleanup(int signum)
 {
+    printf("clk destroooooyed: clk\n");
+    destroyClk(true);
     shmctl(shmid, IPC_RMID, NULL);
     printf("\nClock terminating!\n");
     exit(0);

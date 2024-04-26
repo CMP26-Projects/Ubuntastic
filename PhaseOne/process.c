@@ -15,11 +15,11 @@ void stopProcessHandler(int signum)
 }
 void contProcessHandler(int signum)
 {
-    FILE *fp;
+    // FILE *fp;
     
-    fp = fopen("example.txt", "a");
-    fprintf(fp, "AT time %d process %d continued total %d remain %d wait 0\n",getClk(), processID,runTime,remainingTime);
-    fclose(fp);
+    // fp = fopen("example.txt", "a");
+    // fprintf(fp, "AT time %d process %d continued total %d remain %d wait 0\n",getClk(), processID,runTime,remainingTime);
+    // fclose(fp);
     
     // printf("AT time %d process %d continued total %d remain %d wait 0\n",getClk(), processID,runTime,remainingTime); //test
     startTime=getClk();
@@ -37,9 +37,9 @@ int main(int agrc, char *argv[])
     signal(SIGCONT,contProcessHandler);
     FILE *fp;
     
-    fp = fopen("example.txt", "a");
-    fprintf(fp, "AT time %d process %d started total %d remain %d wait 0\n", startTime, processID,runTime,remainingTime);
-    fclose(fp);
+    // fp = fopen("example.txt", "a");
+    // fprintf(fp, "AT time %d process %d started total %d remain %d wait 0\n", startTime, processID,runTime,remainingTime);
+    // fclose(fp);
     
     // printf("AT time %d process %d started total %d remain %d wait 0\n", startTime, processID,runTime,remainingTime); //test
     // TODO it needs to get the remaining time from somewhere

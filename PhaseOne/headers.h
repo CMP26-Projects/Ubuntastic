@@ -64,6 +64,7 @@ void initClk()
 
 void destroyClk(bool terminateAll)
 {
+    printf("Clock Destroyed\n");
     shmdt(shmaddr);
     if (terminateAll)
     {
@@ -79,12 +80,12 @@ void destroyClk(bool terminateAll)
 
 enum processState
 {   
-    ARRIVED,
+    ARRIVED,    //
     STARTED,
     RESUMED,
-    STOPPED,
-    FINISHED,
-    WAITING
+    STOPPED,    //
+    FINISHED,   
+    WAITING     //
 };
 
 struct Process
@@ -94,6 +95,8 @@ struct Process
     int AT; // arrival time
     int Priority;
     int RemT; // remaining time
+    int TAT;
+    int WTA;
     enum processState state;
 };
 
@@ -105,6 +108,7 @@ struct PCB{
     int Priority;
     int RemT; // remaining time
     int WT;
+
     enum processState state;
 };
 

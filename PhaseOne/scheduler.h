@@ -1,14 +1,14 @@
+
 int msgid;
 struct scheduler sch;
 int finishedProcesses;
 struct PCB* pcb;
 int recievedProcesses;
 int totalProcesses;
-int finishedProcesses;
 struct Process* runningProcess;
 struct Process* newProcess;
-int totalWaitingTime;
-int totalWTA;
+float totalWaitingTime;
+float totalWTA;
 int totalProcessingTime;
 
 //Functions definition
@@ -25,7 +25,6 @@ void updateOutfile(struct Process*);
 pid_t getProcessID(struct Process*);
 void updatePCB(struct PCB *,struct Process*,enum processState);    //
 void finishProcessHandler(int); 
-void generateLogFile(); //
 void generatePrefFile();
 void SRTN_Algo();
 void HPF_Algo();
