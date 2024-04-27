@@ -7,145 +7,161 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include<math.h>
+int main(int argc, char *argv[])
+{
+    initializeScheduler(argc,argv);
+    clk_t startTime=getClk();
+    switch(Algo){
+    case SRTN:
+        SRTN_Algo();
+        break;
+    case HPF:
+        HPF_Algo();
+        break;
+    case RR:
+        RR_Algo((argv[4]));
+        break;
+    default:
+        perror("Invalid Scheduler Type\n");
+        break;
+    }
+    int totalElapsedtime = getClk()-startTime;
+    printf("the scheduler has finished in time : %d\n", totalElapsedtime);
+    generatePrefFile();
+    destroyPCB();
+    destroyClk(true);
+    exit(100);
+}
 
 void initializeScheduler(int argc,char** args)
 {    
-    
-    //initalize the scheduler data members
-    sch.Algo=atoi(args[2]); 
-    sch.switchTime=atoi(args[3]);
+    //Initalize the scheduler data members
+    Algo=atoi(args[2]); 
     totalProcesses=atoi(args[1]);
     recievedProcesses=0;
     finishedProcesses=0;
     runningProcess=NULL;
-    newProcess=NULL;
-    totalWaitingTime=0;
-    totalWTA=0;
-    pcb=(struct PCB*)malloc(sizeof(struct PCB));
-
+    totalWT=0;
+    totalWTAT=0;
+    totalRT=0;
+    pcb=(struct PCB*)malloc(totalProcesses*sizeof(struct PCB));
     //instantiate the connection with clk & Process_gen & processes
     initClk();
-    msgid = createMessageQueue();
-    signal(SIGINT, handlerINT);
-    signal(SIGUSR1, finishProcessHandler);
     clk_t startTime = getClk();
-    printf("the scheduler has started in time slice : %d\n", startTime);
+    msgid = createMessageQueue();
+    signal(SIGCHLD, finishProcessHandler);
 }
 
-void handlerINT(int signum)
-{
-    printf("ckock Destroyes\n");
-    //send int signal to all the group to kill them ALL!!
-    kill(getpgrp(),SIGINT);
-    destroyClk(true);
-    exit(-1); //Indicates the unexpected exit and notify the process genetrator 
-}
-
-void pushIntoConatainer(void*container,int type,struct Process* p){
- if(type!=RR)
-    push((struct minHeap*)container,*p);
- else
-    enqueue((struct Queue*)container,*p);
-}
 
 bool checkNewProcesses(void* processContainer)
 {
-        printf("inside the checkNewProcesses\n");
-        struct msgbuf revievingProcess;
-        struct Process* P;
+        msgbuf revievingProcess;
+        process_t* P;
         int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess.data), 7, IPC_NOWAIT);
-        if(msgReciver==-1)//The queue is empty: no processes arrive at this timestamp
-            {printf("no process arrived\n"); return false;}
+        if(msgReciver==-1) //The queue is empty: no processes arrive at this timestamp
+        {
+            return false;
+        }
+        //Create a process of the recieved data
         P = createProcess(revievingProcess.data);
         printf("process %d was sent to the scheduler successfully \n",P->ID);
-        pushIntoConatainer(processContainer,sch.Algo,P);
+        //Add the new process to the scheduler container  (MinHeap|Queue)
+        pushIntoConatainer(processContainer,Algo,P);
         recievedProcesses++;
-        sleep(1);
-        return true; //return the new process
+        return true;
 }
 
-void startProcess(struct Process* p)
+void pushIntoConatainer(void*container,int type,process_t* p)
+{
+ if(type!=RR)
+    push((minHeap_t*)container,*p);
+ else
+    enqueue((queue_t*)container,*p);
+}
+
+void startProcess(process_t* p)
 {    
     pid_t pid = fork();
     if (pid == -1)
     {
-        perror("Error in Forking the New Process.\n");
+        perror("Error in forking the new process\n");
         exit(-1);
     }
     else if (pid == 0)
     {
+        //Read the data of the process and send them
         char id[5], rt[5];
         sprintf(id, "%d", p->ID);
         sprintf(rt, "%d", p->RT);
         char *args[] = {"process.out", id, rt, (char *)NULL};
-        printf("process %d will be forked\n",p->ID);
         execv(realpath(args[0],NULL),args);
         perror("Execl process has failed for creating the process\n");
         exit(-1);
     }
     else
     {
+        runningProcess=p;
         insertPCBSlot(pcb,p,pid);
+        updateOutfile(p);
     }
 }
-//
-void insertPCBSlot(struct PCB * pcb,struct Process* p,pid_t pid)
+
+void insertPCBSlot(pcb_t* pcb, process_t* p, pid_t pid)
 {
-    pcb[p->ID].pid=pid;
-    updatePCB(pcb,p,STARTED); //to be changed in phase2
+    int index=(p->ID)-1;
+    pcb[index].pid=pid;
+    pcb[index].process=p;
+    pcb[index].process->lastRun=getClk();
+    pcb[index].process->WT=getClk()-(p->AT); //Initialize the waiting time
+    updatePCB(pcb,p,STARTED); //To be changed in phase2 
 }
 
-struct Process* getProcessByID(pid_t pid){
-    //TODO: implement this function (get the process info using the real time process ID)
-    struct Process *p =malloc(sizeof(struct Process));
-        for(int i=0;i<recievedProcesses;i++)
-            if(pcb[i].pid==pid)
-            {
-                p->AT=pcb[i].AT;
-                p->ID=pcb[i].id;
-                p->Priority=pcb[i].Priority;
-                p->RemT=pcb[i].RemT;
-                p->RT=pcb[i].RT;
-                p->state=pcb[i].state;
-                return p;
-            }
+process_t* getProcessByID(pid_t pid){
+    //Get the process info using the UNIX pid
+    for(int i=0;i<recievedProcesses;i++)
+        if(pcb[i].pid==pid)
+            return pcb[i].process;
+    return NULL;
 }
 
-void stopProcess(struct Process* p)
+void stopProcess(process_t* p)
 {
     runningProcess=NULL;
     updatePCB(pcb,p,STOPPED);
+    kill(getProcessID(p),SIGSTOP); //Send SIGSTOP to stop the process from execution
     updateOutfile(p);
-    kill(getProcessID(p),SIGSTOP);
-    sleep(sch.switchTime);
 }
 
-void continueProcess(struct Process* p)
+void continueProcess(process_t* p)
 {
     runningProcess=p;
-    if(p->RT==p->RemT)
-        startProcess(p); 
+    if(p->RT==p->RemT) //The first time to run this process
+        startProcess(p);
     else
     {
-        updatePCB(pcb,p,RESUMED);
-        if(pcb[p->ID].RemT<=0)
+        //It has run before
+        if(pcb[p->ID].process->RemT<=0) //It has finished(wouldn't be handled with the SIGCHLD ??) 
             updatePCB(pcb,p,FINISHED);
+        else
+        {
+            updatePCB(pcb,p,RESUMED);
+            kill(getProcessID(p),SIGCONT);
+        }
         updateOutfile(p);
-        kill(getProcessID(p),SIGCONT);
     }
 }
 
-void updateOutfile(struct Process* p)
+void updateOutfile(process_t* p)
 {
-    FILE *file=fopen("/Files/Scheduler.log","a");
+    FILE* file=fopen("Scheduler.log","a");
     if(!file)
-        {
-            printf("Error in Opening the file. . ");
-            return;
-        }
-    struct PCB thisProcessPCB=pcb[p->ID];
+    {
+        printf("Error in opening the file.. ");
+        exit(-1);
+    }
     char st[10];
-    switch (thisProcessPCB.state)
+    switch (p->state)
     {
     case STARTED:
         strcpy(st,"started");
@@ -163,28 +179,61 @@ void updateOutfile(struct Process* p)
         strcpy(st,"resumed");
         break;
     }
-    fprintf(file, "AT time %d process %d %s total %d remain %d wait %d",getClk(), p->ID,st,p->RT,thisProcessPCB.RemT,getClk()-thisProcessPCB.WT);
-    if(thisProcessPCB.state==FINISHED)
+    fprintf(file, "AT time %d process %d %s total %d remain %d wait %d",getClk(), p->ID,st,p->RT,p->RemT,p->WT);
+    if(p->state==FINISHED)
     {
-        fprintf(file," TA %d WTA %d",p->TAT,p->WTA);
+        fprintf(file," TA %d WTA %.2f",p->TAT,p->WTAT);
     }
-        fprintf(file,"\n");
+    fprintf(file,"\n");
     fclose(file);
 }
 
-pid_t getProcessID(struct Process* p)
+pid_t getProcessID(process_t* p)
 {
-    return pcb[p->ID].pid;
+    return pcb[(p->ID)-1].pid;
 }
 
-void updatePCB(struct PCB * pcb,struct Process* p,enum processState Pstate) 
+void updatePCB(pcb_t* pcb,process_t* p,state_t state) 
 {
-    //for phase 1 -> ARRIVED==STARTED (since this function is only invoked if the process is about to get executed)
-    //there's not a case where the process can
-    int index=p->ID;
-    switch (Pstate)
+    //For phase 1 -> ARRIVED==STARTED (since this function is only invoked if the process is about to get executed)
+    //There's not a case where the process can
+    int index=(p->ID)-1;
+    p->state=state;
+    switch (state)
     {
-    // case ARRIVED:
+        case STARTED: //For phase 2 (I guess in this phase I think start process do this)
+        {
+            // pcb[index].id=index;
+            // pcb[index].AT=p->AT;
+            // pcb[index].RemT=(p->RT)-1;
+            // pcb[index].RT=p->RT;
+            // pcb[index].Priority=p->Priority;
+            break;
+        }
+        case RESUMED:
+        {
+            //Set this timestamp as the last time this process has run
+            p->lastRun=getClk();
+            int busyTime=(p->RT)-(p->RemT);
+            p->WT=getClk()-busyTime-(p->AT);
+            break;
+        }
+        case STOPPED:
+        {
+            //Decrement the remaining time from the last time this process has run
+            int elapsed=getClk()-(p->lastRun);
+            p->RemT-=elapsed;
+            break;
+        }
+        case FINISHED:
+        {
+            //Set the turnaround time of the process
+            p->TAT=getClk()-p->AT;
+            p->WTAT=(float)p->TAT/p->RT;
+            p->WT=getClk()-(p->RT)-(p->AT);
+            break;
+        }
+        // case ARRIVED:
     // //case WAITING: (phase2)
     //     {
     //         pcb[index].id=index;
@@ -196,89 +245,74 @@ void updatePCB(struct PCB * pcb,struct Process* p,enum processState Pstate)
     //         pcb[index].Priority=p->Priority;
     //     }
     //     break;
-        case STARTED:
-        {
-            pcb[index].id=index;
-            pcb[index].AT=p->AT;
-            pcb[index].RemT=(p->RT)-1;
-            pcb[index].RT=p->RT;
-            pcb[index].Priority=p->Priority;
-            break;
-        }
-        case RESUMED:
-        {
-            pcb[index].RemT -=1;
-            break;
-        }
-        case FINISHED:
-        {
-            
-        }
     }
-    pcb[index].state=Pstate;
-    pcb[index].WT=getClk()-pcb[index].AT-pcb[index].RT-pcb[index].RemT;
 }
 
 
 void generatePrefFile()
 {
-    FILE *file=fopen("/Files/Scheduler.pref","w");
+    FILE *file=fopen("Scheduler.pref","w");
     if(!file)
+    {
         printf("can't open the file\n");
-    float cpuUtil = (totalProcessingTime / getClk()) * 100;
-    float StdWTA = (float)sqrt(totalWTA/ (float)(totalProcesses - 1));
+        exit(-1);
+    }
+    float cpuUtil = (totalRT*100) / (float)getClk();
+    float StdWTAT = (float)sqrt(totalWTAT/ (float)(totalProcesses - 1));
+    // float StdWTA = (float)(totalWTAT/ (float)(totalProcesses - 1));
     
     fprintf(file, "CPU utilization = %.2f %%\n", cpuUtil);
-    fprintf(file, "Avg WTA = %.2f\n", totalWTA/totalProcesses);
-    fprintf(file, "Avg Waiting = %.2f\n", totalWaitingTime/totalProcesses);
-    fprintf(file, "Std WTA = %.2f\n", StdWTA);
+    fprintf(file, "Avg WTA = %.2f\n", totalWTAT/totalProcesses);
+    fprintf(file, "Avg Waiting = %.2f\n", (float)totalWT/totalProcesses);
+    fprintf(file, "Std WTA = %.2f\n", StdWTAT);
     fclose(file);
 }
+
 
 void finishProcessHandler(int signum)
 {
     //NOTE: NOT FINISHED YET!!!
-    int status;
-    int pid = wait(&status);
-    int ProcessID=WEXITSTATUS(status);
-    printf("process with id %d has ended \n",ProcessID);
-    struct Process* P=getProcessByID(pid);
-    P->state=FINISHED;
-    updatePCB(pcb,P,FINISHED);
-    P->TAT=getClk()-P->AT;
-    P->WTA=P->TAT / P->RT;
-    totalWaitingTime+=P->TAT-P->RT;
-    totalWTA+= getClk()-P->AT;
-    updateOutfile(P);
+    int exitCode;
+    wait(&exitCode);
+    if (WIFEXITED(exitCode)) {
+        int processID=WEXITSTATUS(exitCode);
+        printf("process with id %d has ended \n",processID);
+        //Get the process that has finished
+        process_t* p=pcb[processID-1].process;
+        updatePCB(pcb,p,FINISHED); //Update the pcb (state & TAT & WTAT)
+        totalWT+=p->WT; //Updating the total waiting time
+        totalRT+=p->RT; //Updating the total running time
+        totalWTAT+=p->WTAT; //Updating the total weighted turnaround time
+        finishedProcesses++; //Increment the finished processes count
+        updateOutfile(p); //Update the output file 
+    }
+    else{
+        perror("Something went wrong with the exit code of a process.");
+    }
     
-    /* TODO:
-        * Calculate the WTA of the process from the PCB  and the total waiting time using the following formula:
-        * TA = finish time - arrival time
-        * WTA = TA/RT
-        * totalWTA+= getClk()-P->AT;
-        * totalWaitingTime+= waitingtime of the process;
-    */
 
-    sleep(sch.switchTime);
-    runningProcess=NULL;
-    finishedProcesses++;
-    signal(SIGUSR1,finishProcessHandler);
+    runningProcess=NULL; //Free the running process to choose the next one
+    //Reassign the SIGCHLD signal to this function as a handler
+    signal(SIGCHLD,finishProcessHandler);
 }
-
+void destroyPCB()
+{
+    free(pcb);
+}
 void SRTN_Algo()
 {
-    clk_t startTime=getClk();
-    struct minHeap PQ=initializeHeap(SRTN);
-    struct msgbuf revievingProcess;
-    while(finishedProcesses!=totalProcesses){
+    minHeap_t PQ=initializeHeap(SRTN);
+    msgbuf revievingProcess;
+    printf("SRT\n");
+    while(finishedProcesses<totalProcesses) //Loop until all the processes are finished
+    {
         //Checking for arriving processes
         while(checkNewProcesses(&PQ))
         { 
             printHeap(&PQ);
         }
-
-        struct Process* shortestProcess=getMin(&PQ);
-        printProcess(*shortestProcess);
+        process_t* shortestProcess=getMin(&PQ);
+        // printProcess(shortestProcess);
         //No process is running so just run the shortest one if it exists
         if(runningProcess==NULL)
         {
@@ -290,8 +324,9 @@ void SRTN_Algo()
         }
         else
         {
-            //if 
-            if(shortestProcess!=NULL&&runningProcess->RemT>shortestProcess->RemT)
+            //If there is a running process, check it's the shortest one
+            // if it isn't the shortest, stop the running one and run the shortest. 
+            if((shortestProcess!=NULL) && (runningProcess->RemT > shortestProcess->RemT))
             {
                 pop(&PQ);
                 push(&PQ,*runningProcess);
@@ -299,46 +334,37 @@ void SRTN_Algo()
                 continueProcess(shortestProcess);
             }  
         }
-        
     }
-    int totalElapsedtime = getClk()-startTime;
-    printf("the scheduler has finished in time : %d\n", totalElapsedtime);
-    destroyHeap(&PQ);
+    destroyHeap(&PQ); //Deallocate the processes container
 }
 
 void HPF_Algo()
 {
     printf("HPF\n");
-    struct minHeap PQ=initializeHeap(HPF);
-    printHeap(&PQ);
-    struct msgbuf revievingProcess;
-    printf("the number of processes is : %d\n", totalProcesses);
-    
+    minHeap_t PQ=initializeHeap(HPF);
     ////////////Scheduling Algo implementation//////////////
     while(finishedProcesses < totalProcesses)
     {
-        printf("Time in scheduler: %d\n",getClk());
-        struct Process* topPriority = runningProcess;
-        while(checkNewProcesses(&PQ)){}
+        process_t* topPriority = runningProcess;
+        checkNewProcesses(&PQ);
         if(!runningProcess || runningProcess && runningProcess->RemT==0)
             if(topPriority=getMin(&PQ))
             {
                 pop(&PQ);
-                printProcess(*topPriority); //test
+                printProcess(topPriority); //test
             }
         runningProcess=topPriority;
         continueProcess(runningProcess);
     }
-    printf("the scheduler has finished in time : %d\n", getClk());
-    destroyHeap(&PQ);
+    destroyHeap(&PQ); //Deallocate the processes container
 }
 
 void RR_Algo(char* timeSlice)
 {
     printf("RR\n");
-    struct Queue ProcessQueue;
-    struct Process P;
-    struct msgbuf revievingProcess;
+    queue_t ProcessQueue;
+    process_t P;
+    msgbuf revievingProcess;
     initializeQueue(&ProcessQueue);    
     printf("the number of processes is : %d\n", totalProcesses);
 
@@ -346,28 +372,4 @@ void RR_Algo(char* timeSlice)
 
     printf("the scheduler has finished in time : %d\n", getClk());
     destroyQueue(&ProcessQueue);
-}
-
-int main(int argc, char *argv[])
-{
-    // =======Initializing Scheduler========== //
-    initializeScheduler(argc,argv);
-    switch(sch.Algo){
-    case SRTN:
-        SRTN_Algo();
-        break;
-    case HPF:
-        HPF_Algo();
-        break;
-    case RR:
-        RR_Algo((argv[4]));
-        break;
-    default:
-        printf("Invalid Scheduler Type\n");
-        exit(-1);
-        break;
-    }
-    generatePrefFile();
-    destroyClk(true);
-    //TODO : deallocate the PCB
 }

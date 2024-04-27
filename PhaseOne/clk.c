@@ -12,8 +12,6 @@ int shmid;
 /* Clear the resources before exit */
 void cleanup(int signum)
 {
-    printf("clk destroooooyed: clk\n");
-    destroyClk(true);
     shmctl(shmid, IPC_RMID, NULL);
     printf("\nClock terminating!\n");
     exit(0);
@@ -24,7 +22,7 @@ int main(int argc, char *argv[])
 {
     printf("Clock starting\n");
     signal(SIGINT, cleanup);
-    int clk = 0;
+    clk_t clk = 0;
     
     // Create shared memory for one integer variable 4 bytes
     shmid = shmget(SHKEY, 4, IPC_CREAT | 0644);

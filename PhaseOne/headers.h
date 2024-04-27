@@ -16,7 +16,7 @@ typedef int clk_t;
 typedef short bool;
 #define true 1
 #define false 0
-#define SHKEY 30000
+#define SHKEY 300
 #define SRTN 0
 #define HPF 1
 #define RR 2
@@ -35,12 +35,6 @@ clk_t getClk()
  * All process call this function at the beginning to establish communication between them and the clock module.
  * Again, remember that the clock is only emulation!
  */
-struct msgbuf
-{
-    long mtype;
-    int data[4];
-};
-
 void initClk()
 {
     int shmid = shmget(SHKEY, 4, 0444);
@@ -48,8 +42,8 @@ void initClk()
     {
         // Make sure that the clock exists
         printf("Wait! The clock not initialized yet!\n");
-        sleep(1);
         shmid = shmget(SHKEY, 4, 0444);
+        sleep(1);
     }
     shmaddr = (int *)shmat(shmid, (void *)0, 0);
 }
@@ -64,7 +58,6 @@ void initClk()
 
 void destroyClk(bool terminateAll)
 {
-    printf("Clock Destroyed\n");
     shmdt(shmaddr);
     if (terminateAll)
     {
@@ -73,300 +66,104 @@ void destroyClk(bool terminateAll)
 }
 
 ///////////////////////////////////////
-///// Data Structures Implementation///
+//////////Structs Implementation///////
 ///////////////////////////////////////
 
-//==============Process==============//
+typedef struct msgbuf
+{
+    long mtype;
+    int data[4];
+}msgbuf;
 
-enum processState
+//==============Process==============//
+typedef enum processState
 {   
-    ARRIVED,    //
+    ARRIVED,   
     STARTED,
     RESUMED,
-    STOPPED,    //
+    STOPPED,
     FINISHED,   
-    WAITING     //
-};
+    WAITING
+}state_t;
 
-struct Process
+typedef struct Process
 {
-    int ID;
-    int RT; // running time
-    int AT; // arrival time
-    int Priority;
-    int RemT; // remaining time
-    int TAT;
-    int WTA;
-    enum processState state;
-};
+    int ID; //Simulated ID
+    int priority; //Priority
+    int RT; //Run time
+    int RemT; //Remaining time
+    int WT; //Waiting time 
+    int TAT; //Turnaround time
+    float WTAT; //Weighted turnaround time
+    clk_t AT; //Arrival time
+    clk_t lastRun; //Last time this process has run
+    state_t state; //Current state of the process
+}process_t;
 
-struct PCB{
-    pid_t pid; //real Unix pid
-    int id; // id of incoming process
-    int RT; // running time
-    int AT; // arrival time
-    int Priority;
-    int RemT; // remaining time
-    int WT;
-
-    enum processState state;
-};
-
-struct scheduler{
-    int Algo;
-    int switchTime;
-    int timeSlice;
-    //TODO: add any necessary data members
-};
-
-struct Process* createProcess(int processInfo[])
-{
-    struct Process* P=(struct Process*)malloc(sizeof(struct Process));
-    P->ID = processInfo[0];
-    P->AT = processInfo[1];
-    P->RT = processInfo[2];
-    P->RemT = processInfo[2];
-    P->Priority = processInfo[3];
-    P->state = WAITING;
-    return P;
-}
-
-void printProcess(struct Process P)
-{
-    printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", P.ID, P.AT, P.RT, P.Priority, P.RemT, P.state);
-}
+typedef struct PCB{
+    pid_t pid; //Real Unix pid
+    process_t* process; //To link the process with PCB (Not Sure)
+}pcb_t;
 
 //===============Queue===============//
-// Define the structure for a queue node
-
-struct QNode
+typedef struct QNode
 {
-    struct Process data;
-    struct QNode *next;
-};
+    process_t data;
+    struct QNode* next;
+}node_t;
 
-struct Queue
+typedef struct Queue
 {
-    struct QNode *front;
-    struct QNode *rear;
+    node_t* front;
+    node_t* rear;
     int count;
-};
+}queue_t;
 
-bool isEmpty(struct Queue *q)
-{
+bool isEmpty(queue_t*);
 
-    return q->front == NULL;
-}
+void initializeQueue(queue_t*);
 
-void initializeQueue(struct Queue *q)
-{
-    q->front = q->rear = NULL;
-    q->count=0;
-}
+void enqueue(queue_t* q, process_t);
 
-void enqueue(struct Queue *q, struct Process x)
-{
-    struct QNode *temp = (struct QNode *)malloc(sizeof(struct QNode));
-    temp->data = x;
-    temp->next = NULL;
+bool dequeue(queue_t*,process_t**);
 
-    if (q->rear == NULL)
-    {
-        q->front = q->rear = temp;
-    }
-    else
-    {
-        q->rear->next = temp;
-        q->rear = temp;
-    }
-    (q->count)++;
-}
+void printQueue(queue_t*);
 
-bool dequeue(struct Queue *q, struct Process **p)
-{
-    if (q->front == NULL)
-    {
-        *p = NULL;
-        return false;
-    }
-
-    struct QNode *temp = q->front;
-    q->front = q->front->next;
-
-    if (q->front == NULL)
-    {
-        q->rear = NULL;
-    }
-    --(q->count);
-
-    // Allocate memory for p and copy the data from temp->data
-    if(*p == NULL)
-    *p = (struct Process *)malloc(sizeof(struct Process));
-    **p = temp->data;
-    free(temp);
-
-    return true;
-}
-
-void printQueue(struct Queue *q)
-{
-    struct QNode *temp = q->front;
-    while (temp != NULL)
-    {
-        printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", temp->data.ID, temp->data.AT, temp->data.RT, temp->data.Priority, temp->data.RemT, temp->data.state);
-        temp = temp->next;
-    }
-}
-
-void destroyQueue(struct Queue *q)
-{
-    struct Process *p;
-    while (dequeue(q, &p))
-    {
-        free(p);
-    }
-}
+void destroyQueue(queue_t*);
 
 //===============minHeap===============//
-
-struct minHeap
+typedef struct minHeap
 {
     int size;
     bool criteria;
     struct Process *arr;
-};
+}minHeap_t;
 
-struct minHeap initializeHeap(int criteria)
-{
-    struct minHeap heap;
-    heap.size = 0;
-    heap.criteria = criteria;
-    return heap;
-}
+minHeap_t initializeHeap(int);
 
-bool lessThan(struct Process a, struct Process b, bool criteria)
-{
-    if (criteria == 0)
-        return (a.RemT < b.RemT); // for SRTN
-    else
-        return (a.Priority < b.Priority); // for non pre-emitive HPF
-}
+bool lessThan(struct Process a, struct Process b, bool criteria);
 
-bool isEmptyHeap(struct minHeap *heap)
-{
+bool isEmptyHeap(struct minHeap*);
 
-    return heap->size == 0;
-}
+void push(minHeap_t*,process_t);
 
-void push(struct minHeap *heap, struct Process P)
-{
-    heap->arr = (heap->size == 0) ? malloc(sizeof(struct Process)) : realloc(heap->arr, (heap->size + 1) * sizeof(struct Process));
-    struct Process newProcess = P;
-    int i = (heap->size)++;
-    while (i > 0 && lessThan(newProcess, heap->arr[(i - 1) / 2], heap->criteria))
-    {
-        heap->arr[i] = heap->arr[(i - 1) / 2];
-        i = (i - 1) / 2;
-    }
-    heap->arr[i] = newProcess;
-}
+void heapify(minHeap_t*,int);
 
-void heapify(struct minHeap *heap, int i)
-{
-    int smallest = i;
-    int left = 2 * i + 1;
-    int right = 2 * i + 2;
-    if (left < heap->size && lessThan(heap->arr[left], heap->arr[smallest], heap->criteria))
-    {
-        smallest = left;
-    }
-    if (right < heap->size && lessThan(heap->arr[right], heap->arr[smallest], heap->criteria))
-    {
-        smallest = right;
-    }
-    if (smallest != i)
-    {
-        struct Process temp = heap->arr[i];
-        heap->arr[i] = heap->arr[smallest];
-        heap->arr[smallest] = temp;
-        heapify(heap, smallest);
-    }
-}
+struct Process* getMin(struct minHeap*);
 
-struct Process* getMin(struct minHeap *heap)
-{
-    return &heap->arr[0];
-}
+void pop(minHeap_t*);
 
-void pop(struct minHeap *heap)
-{
-    if (heap->size == 0)
-        return;
-    struct Process temp = heap->arr[0];
-    heap->arr[0] = heap->arr[heap->size - 1];
-    heap->size--;
-    heapify(heap, 0);
-}
+void printHeap(minHeap_t*);
 
-void printHeap(struct minHeap *heap)
-{
-    for (int i = 0; i < heap->size; i++)
-    {
-        printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", heap->arr[i].ID, heap->arr[i].AT, heap->arr[i].RT, heap->arr[i].Priority, heap->arr[i].RemT, heap->arr[i].state);
-    }
-}
+void destroyHeap(minHeap_t* heap);
 
-void destroyHeap(struct minHeap *heap)
-{
-    free(heap->arr);
-    heap->size = 0;
-}
 //===============Semaphores===============//
-
-union Semun
-{
-    int val;
-    struct semid_ds *buf;
-    unsigned short *array;
-    struct seminfo *__buf;
-};
-
-void down(int sem)
-{
-    struct sembuf op;
-
-    op.sem_num = 0;
-    op.sem_op = -1;
-    op.sem_flg = !IPC_NOWAIT;
-
-    if (semop(sem, &op, 1) == -1)
-    {
-        perror("Error in down()");
-        exit(-1);
-    }
-}
-
-void up(int sem)
-{
-    struct sembuf op;
-
-    op.sem_num = 0;
-    op.sem_op = 1;
-    op.sem_flg = !IPC_NOWAIT;
-
-    if (semop(sem, &op, 1) == -1)
-    {
-        perror("Error in up()");
-        exit(-1);
-    }
-}
-
 int createMessageQueue()
 {
     key_t key_id;
     int msgid;
 
-    key_id = ftok("example.txt", 65);
+    key_id = ftok("processes.txt", 65);
     msgid = msgget(key_id, 0666 | IPC_CREAT);
 
     if (msgid == -1)
@@ -374,7 +171,6 @@ int createMessageQueue()
         perror("there error in creates a queue !");
         exit(-1);
     }
-    printf("Message queue ID is : %d \n", msgid);
     return msgid;
 }
 
@@ -391,17 +187,260 @@ int creatShMemory()
     return shmid;
 }
 
-int Creatsem(int *sem2)
-{
 
-    key_t keyid_sem1 = ftok("file.txt", 62);
-    key_t keyid_sem2 = ftok("file.txt", 63);
-    *sem2 = semget(keyid_sem2, 1, 0666 | IPC_CREAT);
-    int sem1 = semget(keyid_sem1, 1, 0666 | IPC_CREAT);
-    if (sem1 == -1 || *sem2 == -1)
+union Semun
+{
+    int val;
+    struct semid_ds *buf;
+    unsigned short *array;
+    struct seminfo *__buf;
+};
+
+// void down(int sem)
+// {
+//     struct sembuf op;
+
+//     op.sem_num = 0;
+//     op.sem_op = -1;
+//     op.sem_flg = !IPC_NOWAIT;
+
+//     if (semop(sem, &op, 1) == -1)
+//     {
+//         perror("Error in down()");
+//         exit(-1);
+//     }
+// }
+
+// void up(int sem)
+// {
+//     struct sembuf op;
+
+//     op.sem_num = 0;
+//     op.sem_op = 1;
+//     op.sem_flg = !IPC_NOWAIT;
+
+//     if (semop(sem, &op, 1) == -1)
+//     {
+//         perror("Error in up()");
+//         exit(-1);
+//     }
+// }
+
+// int Creatsem(int *sem2)
+// {
+
+//     key_t keyid_sem1 = ftok("file.txt", 62);
+//     key_t keyid_sem2 = ftok("file.txt", 63);
+//     *sem2 = semget(keyid_sem2, 1, 0666 | IPC_CREAT);
+//     int sem1 = semget(keyid_sem1, 1, 0666 | IPC_CREAT);
+//     if (sem1 == -1 || *sem2 == -1)
+//     {
+//         perror("Error in create sem");
+//         exit(-1);
+//     }
+//     return sem1;
+// }
+
+process_t* createProcess(int processInfo[])
+{
+    process_t* P=(process_t*)malloc(sizeof(process_t));
+    P->ID = processInfo[0];
+    P->AT = processInfo[1];
+    P->RT = processInfo[2];
+    P->RemT = processInfo[2];
+    P->priority = processInfo[3];
+    P->state = WAITING;
+    P->WT=0;
+    return P;
+}
+
+void printProcess(process_t* temp)
+{
+    if(temp!=NULL)
+    printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, ", temp->ID, temp->AT, temp->RT, temp->priority, temp->RemT);
+    switch (temp->state)
     {
-        perror("Error in create sem");
-        exit(-1);
+    case FINISHED:
+        printf("State: FINISHED\n");
+        break;
+    
+    case WAITING:
+        printf("State: WAITING\n");
+        break;
+    
+    case RESUMED:
+        printf("State: RESUMED\n");
+        break;
+    
+    case STOPPED:
+        printf("State: STOPPED\n");
+        break;
+    
+    case ARRIVED:
+        printf("State: ARRIVED\n");
+        break;
+            
+    default:
+        printf("State: STARTED\n");
+        break;
     }
-    return sem1;
+}
+
+minHeap_t initializeHeap(int crit)
+{
+    minHeap_t heap;
+    heap.size = 0;
+    heap.criteria = crit;
+    return heap;
+}
+
+bool lessThan(process_t a, process_t b, bool criteria)
+{
+    if (criteria == 0)
+        return (a.RemT < b.RemT); //For SRTN
+    else
+        return (a.priority < b.priority); //For Non Pre-emitive HPF
+}
+
+bool isEmptyHeap(minHeap_t* heap)
+{
+    return heap->size == 0;
+}
+
+void push(minHeap_t* heap,process_t P)
+{
+    heap->arr = (heap->size == 0) ? malloc(sizeof(process_t)) : realloc(heap->arr, (heap->size + 1) * sizeof(process_t));
+    process_t newProcess = P;
+    int i = (heap->size)++;
+    while (i > 0 && lessThan(newProcess, heap->arr[(i - 1) / 2], heap->criteria))
+    {
+        heap->arr[i] = heap->arr[(i - 1) / 2];
+        i = (i - 1) / 2;
+    }
+    heap->arr[i] = newProcess;
+}
+
+void heapify(minHeap_t* heap, int i)
+{
+    int smallest = i;
+    int left = 2 * i + 1;
+    int right = 2 * i + 2;
+    if (left < heap->size && lessThan(heap->arr[left], heap->arr[smallest], heap->criteria))
+    {
+        smallest = left;
+    }
+    if (right < heap->size && lessThan(heap->arr[right], heap->arr[smallest], heap->criteria))
+    {
+        smallest = right;
+    }
+    if (smallest != i)
+    {
+        process_t temp = heap->arr[i];
+        heap->arr[i] = heap->arr[smallest];
+        heap->arr[smallest] = temp;
+        heapify(heap, smallest);
+    }
+}
+
+process_t* getMin(minHeap_t* heap)
+{
+    return (heap->size!=0)? &heap->arr[0] : NULL;
+}
+
+void pop(minHeap_t* heap)
+{
+    if (heap->size == 0)
+        return;
+    process_t temp = heap->arr[0];
+    heap->arr[0] = heap->arr[heap->size - 1];
+    heap->size--;
+    heapify(heap, 0);
+}
+
+void printHeap(minHeap_t* heap)
+{
+    for (int i = 0; i < heap->size; i++)
+    {
+        printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", heap->arr[i].ID, heap->arr[i].AT, heap->arr[i].RT, heap->arr[i].priority, heap->arr[i].RemT, heap->arr[i].state);
+    }
+}
+
+void destroyHeap(minHeap_t* heap)
+{
+    free(heap->arr);
+    heap->size = 0;
+}
+
+bool isEmpty(queue_t *q)
+{
+    return q->front == NULL;
+}
+
+void initializeQueue(queue_t* q)
+{
+    q->front = q->rear = NULL;
+    q->count=0;
+}
+
+void enqueue(queue_t* q,process_t x)
+{
+    node_t* temp = (node_t*)malloc(sizeof(node_t));
+    temp->data = x;
+    temp->next = NULL;
+
+    if (q->rear == NULL)
+    {
+        q->front = q->rear = temp;
+    }
+    else
+    {
+        q->rear->next = temp;
+        q->rear = temp;
+    }
+    (q->count)++;
+}
+
+bool dequeue(queue_t* q, process_t** p)
+{
+    if (q->front == NULL)
+    {
+        *p = NULL;
+        return false;
+    }
+
+    node_t* temp = q->front;
+    q->front = q->front->next;
+    //IT was the only node in the queue
+    if (q->front == NULL)
+    {
+        q->rear = NULL;
+    }
+    --(q->count);
+
+    // Allocate memory for p and copy the data from temp->data
+    if(*p == NULL)
+    *p = (process_t*)malloc(sizeof(process_t));
+    **p = temp->data;
+    free(temp);
+
+    return true;
+}
+
+void printQueue(queue_t* q)
+{
+    node_t* temp = q->front;
+    while (temp != NULL)
+    {
+        printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", temp->data.ID, temp->data.AT, temp->data.RT, temp->data.priority, temp->data.RemT, temp->data.state);
+        temp = temp->next;
+    }
+}
+
+void destroyQueue(queue_t* q)
+{
+    process_t* p;
+    while (dequeue(q, &p))
+    {
+        free(p);
+    }
 }
