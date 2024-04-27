@@ -27,7 +27,7 @@ int main(int agrc, char *argv[])
     //Set the signals' handlers 
     signal(SIGSTOP,stopProcessHandler);
     signal(SIGCONT,contProcessHandler);
-    printf("The process started with pid= %d ", processID);
+    printf("The process started with pid= %d \n", processID);
     sleep(1);
     while (remainingTime>0)
     { 
@@ -36,6 +36,7 @@ int main(int agrc, char *argv[])
     //Clear Resources
     destroyClk(false);
     //Notify scheduler that the process has finished
+    kill(getppid(),SIGUSR1);
     //Return the real process ID to remove its slot from the PCB
     exit(processID);
 }

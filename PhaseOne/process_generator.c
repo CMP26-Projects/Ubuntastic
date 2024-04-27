@@ -71,15 +71,14 @@ int main(int argc, char *argv[])
                 {
                     sendingProcess=createProcessMessage(P);
                     int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data), IPC_NOWAIT);
+                    if(msgSending==-1)
+                        printf("there is an error in sending");
+                    printf("Process %d has sent to the scheduler succesfully at time clock %d \n",P->ID,currTimeStamp);
                     dequeue(&ProcessQueue, &P);
                 }
             }
-            int exitCode;
-            // printf("Waits for the scheduler\n");
-            while(1);
-            waitpid(scheduler,&exitCode,WUNTRACED);//get the status if it was stopped
-            printf("Finished with %d\n",exitCode>>8);
-
+            //Waits for the scheduler to terminate
+            waitpid(scheduler,NULL,0);
         }
     }
 }
@@ -162,4 +161,5 @@ void clearResources(int signum)
     //Delete the processes shared memory
     msgctl(msgid, IPC_RMID, (struct msqid_ds *)0);
     destroyQueue(&ProcessQueue);
+    signal(SIGINT,clearResources);
 }

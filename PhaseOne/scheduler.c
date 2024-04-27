@@ -8,6 +8,38 @@
 #include <string.h>
 #include <signal.h>
 #include<math.h>
+int msgid;
+pcb_t* pcb;
+process_t* runningProcess;
+process_t* lastRecieved;
+int Algo;
+int timeSlice;
+int finishedProcesses;
+int recievedProcesses;
+int totalProcesses;
+int totalWT;
+int totalRT;
+float totalWTAT;
+
+//Functions definition
+void initializeScheduler();
+void handlerINT(int);
+bool checkNewProcesses(void*);
+void pushIntoConatainer(void*,int,process_t*);
+void startProcess(process_t*);
+void insertPCBSlot(pcb_t*,process_t*,pid_t);             
+process_t* getProcessByID(pid_t);
+void stopProcess(process_t*);
+void continueProcess(process_t*);
+void updateOutfile(process_t*);
+pid_t getProcessID(process_t*);
+void updatePCB(pcb_t*,process_t*,state_t);    
+void finishProcessHandler(int);
+void generatePrefFile();
+void SRTN_Algo();
+void HPF_Algo();
+void RR_Algo(char*);
+void destroyPCB();
 int main(int argc, char *argv[])
 {
     initializeScheduler(argc,argv);
@@ -26,12 +58,11 @@ int main(int argc, char *argv[])
         perror("Invalid Scheduler Type\n");
         break;
     }
-    int totalElapsedtime = getClk()-startTime;
-    printf("the scheduler has finished in time : %d\n", totalElapsedtime);
     generatePrefFile();
     destroyPCB();
+    int totalElapsedtime = getClk()-startTime;
+    printf("the scheduler has finished in time : %d\n", totalElapsedtime);
     destroyClk(true);
-    exit(100);
 }
 
 void initializeScheduler(int argc,char** args)
@@ -42,6 +73,7 @@ void initializeScheduler(int argc,char** args)
     recievedProcesses=0;
     finishedProcesses=0;
     runningProcess=NULL;
+    lastRecieved=NULL;
     totalWT=0;
     totalWTAT=0;
     totalRT=0;
@@ -50,7 +82,9 @@ void initializeScheduler(int argc,char** args)
     initClk();
     clk_t startTime = getClk();
     msgid = createMessageQueue();
-    signal(SIGCHLD, finishProcessHandler);
+    signal(SIGUSR1,finishProcessHandler);
+    //Clear the scheduler.log file
+    system("rm Scheduler.log");
 }
 
 
@@ -59,12 +93,13 @@ bool checkNewProcesses(void* processContainer)
         msgbuf revievingProcess;
         process_t* P;
         int msgReciver = msgrcv(msgid, &revievingProcess, sizeof(revievingProcess.data), 7, IPC_NOWAIT);
-        if(msgReciver==-1) //The queue is empty: no processes arrive at this timestamp
+        if(msgReciver==-1||(lastRecieved!=NULL&&lastRecieved->ID==revievingProcess.data[0])) //The queue is empty: no processes arrive at this timestamp
         {
             return false;
         }
         //Create a process of the recieved data
         P = createProcess(revievingProcess.data);
+        lastRecieved=P;
         printf("process %d was sent to the scheduler successfully \n",P->ID);
         //Add the new process to the scheduler container  (MinHeap|Queue)
         pushIntoConatainer(processContainer,Algo,P);
@@ -203,11 +238,6 @@ void updatePCB(pcb_t* pcb,process_t* p,state_t state)
     {
         case STARTED: //For phase 2 (I guess in this phase I think start process do this)
         {
-            // pcb[index].id=index;
-            // pcb[index].AT=p->AT;
-            // pcb[index].RemT=(p->RT)-1;
-            // pcb[index].RT=p->RT;
-            // pcb[index].Priority=p->Priority;
             break;
         }
         case RESUMED:
@@ -258,9 +288,7 @@ void generatePrefFile()
         exit(-1);
     }
     float cpuUtil = (totalRT*100) / (float)getClk();
-    float StdWTAT = (float)sqrt(totalWTAT/ (float)(totalProcesses - 1));
-    // float StdWTA = (float)(totalWTAT/ (float)(totalProcesses - 1));
-    
+    float StdWTAT = (float)sqrt(totalWTAT/ (float)(totalProcesses - 1)); 
     fprintf(file, "CPU utilization = %.2f %%\n", cpuUtil);
     fprintf(file, "Avg WTA = %.2f\n", totalWTAT/totalProcesses);
     fprintf(file, "Avg Waiting = %.2f\n", (float)totalWT/totalProcesses);
@@ -276,7 +304,7 @@ void finishProcessHandler(int signum)
     wait(&exitCode);
     if (WIFEXITED(exitCode)) {
         int processID=WEXITSTATUS(exitCode);
-        printf("process with id %d has ended \n",processID);
+        printf("process with id %d has ended at time clock %d \n",processID, getClk());
         //Get the process that has finished
         process_t* p=pcb[processID-1].process;
         updatePCB(pcb,p,FINISHED); //Update the pcb (state & TAT & WTAT)
@@ -293,7 +321,8 @@ void finishProcessHandler(int signum)
 
     runningProcess=NULL; //Free the running process to choose the next one
     //Reassign the SIGCHLD signal to this function as a handler
-    signal(SIGCHLD,finishProcessHandler);
+    signal(SIGUSR1,finishProcessHandler);
+
 }
 void destroyPCB()
 {
@@ -301,9 +330,10 @@ void destroyPCB()
 }
 void SRTN_Algo()
 {
-    minHeap_t PQ=initializeHeap(SRTN);
-    msgbuf revievingProcess;
-    printf("SRT\n");
+
+        minHeap_t PQ=initializeHeap(SRTN);
+    system("clear");
+    printf("(--------------------SRTN ALGORITHM--------------------)\n");
     while(finishedProcesses<totalProcesses) //Loop until all the processes are finished
     {
         //Checking for arriving processes
@@ -311,8 +341,8 @@ void SRTN_Algo()
         { 
             printHeap(&PQ);
         }
+
         process_t* shortestProcess=getMin(&PQ);
-        // printProcess(shortestProcess);
         //No process is running so just run the shortest one if it exists
         if(runningProcess==NULL)
         {
@@ -340,21 +370,30 @@ void SRTN_Algo()
 
 void HPF_Algo()
 {
-    printf("HPF\n");
+
     minHeap_t PQ=initializeHeap(HPF);
+    system("clear");
+    printf("(Finished processes = %d , total Processes = %d )\n",finishedProcesses,totalProcesses); 
+    printf("(--------------------HPF ALGORITHM--------------------)\n"); 
     ////////////Scheduling Algo implementation//////////////
+    sleep(2);
     while(finishedProcesses < totalProcesses)
     {
         process_t* topPriority = runningProcess;
-        checkNewProcesses(&PQ);
-        if(!runningProcess || runningProcess && runningProcess->RemT==0)
-            if(topPriority=getMin(&PQ))
+        while(checkNewProcesses(&PQ)){
+            printHeap(&PQ);
+        }
+        
+        //No process is running so just run the one with the higest priority one if it exists
+        if(runningProcess==NULL)
+        {
+            process_t* topPriority=getMin(&PQ);
+            if(topPriority!=NULL)
             {
                 pop(&PQ);
-                printProcess(topPriority); //test
+                continueProcess(topPriority);
             }
-        runningProcess=topPriority;
-        continueProcess(runningProcess);
+        }
     }
     destroyHeap(&PQ); //Deallocate the processes container
 }

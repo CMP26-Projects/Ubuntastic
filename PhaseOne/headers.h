@@ -361,7 +361,7 @@ void printHeap(minHeap_t* heap)
 {
     for (int i = 0; i < heap->size; i++)
     {
-        printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", heap->arr[i].ID, heap->arr[i].AT, heap->arr[i].RT, heap->arr[i].priority, heap->arr[i].RemT, heap->arr[i].state);
+        printProcess(&heap->arr[i]);
     }
 }
 
