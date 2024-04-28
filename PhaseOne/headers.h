@@ -11,12 +11,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-
+#include <string.h>
 typedef int clk_t;
 typedef short bool;
 #define true 1
 #define false 0
-#define SHKEY 300
+#define SHKEY 3000
 #define SRTN 0
 #define HPF 1
 #define RR 2
@@ -187,60 +187,6 @@ int creatShMemory()
     return shmid;
 }
 
-
-union Semun
-{
-    int val;
-    struct semid_ds *buf;
-    unsigned short *array;
-    struct seminfo *__buf;
-};
-
-// void down(int sem)
-// {
-//     struct sembuf op;
-
-//     op.sem_num = 0;
-//     op.sem_op = -1;
-//     op.sem_flg = !IPC_NOWAIT;
-
-//     if (semop(sem, &op, 1) == -1)
-//     {
-//         perror("Error in down()");
-//         exit(-1);
-//     }
-// }
-
-// void up(int sem)
-// {
-//     struct sembuf op;
-
-//     op.sem_num = 0;
-//     op.sem_op = 1;
-//     op.sem_flg = !IPC_NOWAIT;
-
-//     if (semop(sem, &op, 1) == -1)
-//     {
-//         perror("Error in up()");
-//         exit(-1);
-//     }
-// }
-
-// int Creatsem(int *sem2)
-// {
-
-//     key_t keyid_sem1 = ftok("file.txt", 62);
-//     key_t keyid_sem2 = ftok("file.txt", 63);
-//     *sem2 = semget(keyid_sem2, 1, 0666 | IPC_CREAT);
-//     int sem1 = semget(keyid_sem1, 1, 0666 | IPC_CREAT);
-//     if (sem1 == -1 || *sem2 == -1)
-//     {
-//         perror("Error in create sem");
-//         exit(-1);
-//     }
-//     return sem1;
-// }
-
 process_t* createProcess(int processInfo[])
 {
     process_t* P=(process_t*)malloc(sizeof(process_t));
@@ -351,7 +297,7 @@ void pop(minHeap_t* heap)
 {
     if (heap->size == 0)
         return;
-    process_t temp = heap->arr[0];
+    process_t* temp = &heap->arr[0];
     heap->arr[0] = heap->arr[heap->size - 1];
     heap->size--;
     heapify(heap, 0);
@@ -359,6 +305,7 @@ void pop(minHeap_t* heap)
 
 void printHeap(minHeap_t* heap)
 {
+    printf("The heap at time: %d\n",getClk());
     for (int i = 0; i < heap->size; i++)
     {
         printProcess(&heap->arr[i]);
@@ -428,10 +375,11 @@ bool dequeue(queue_t* q, process_t** p)
 
 void printQueue(queue_t* q)
 {
+    printf("The queue at time: %d\n",getClk());
     node_t* temp = q->front;
     while (temp != NULL)
     {
-        printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, state: %d\n", temp->data.ID, temp->data.AT, temp->data.RT, temp->data.priority, temp->data.RemT, temp->data.state);
+        printProcess(&temp->data);
         temp = temp->next;
     }
 }

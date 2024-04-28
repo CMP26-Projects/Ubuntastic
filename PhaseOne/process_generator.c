@@ -10,8 +10,11 @@ msgbuf createProcessMessage(process_t*); //Create a message of the process data 
 
 int main(int argc, char *argv[])
 {
-    int schedAlgo,timeSlice=-1;
+    // int schedAlgo=atoi(argv[2]);
+    // if(argc>3&&schedAlgo==RR)
+    // timeSlice=atoi(argv[3]);
 
+    int timeSlice,schedAlgo;
     signal(SIGINT, clearResources); //If it gets interrupted, clear the resources 
 
     //Read the input files.
@@ -19,7 +22,6 @@ int main(int argc, char *argv[])
     //Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     getUserInput(&schedAlgo, &timeSlice);
     
-    printf("Number of Processes: %d\n", numProcesses);
     //Initiate and create clock process.    
     pid_t clk = fork();
     if (clk == -1)
@@ -73,7 +75,6 @@ int main(int argc, char *argv[])
                     int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data), IPC_NOWAIT);
                     if(msgSending==-1)
                         printf("there is an error in sending");
-                    printf("Process %d has sent to the scheduler succesfully at time clock %d \n",P->ID,currTimeStamp);
                     dequeue(&ProcessQueue, &P);
                 }
             }
