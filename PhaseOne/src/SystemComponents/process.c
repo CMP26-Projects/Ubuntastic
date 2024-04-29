@@ -1,4 +1,4 @@
-#include "./src/SystemComponents/headers.h"
+#include "headers.h"
 
 int processID,runTime,remainingTime,startTime; 
 void stop(int);

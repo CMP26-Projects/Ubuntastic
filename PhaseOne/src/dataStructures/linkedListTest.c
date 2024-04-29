@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "./src/dataStructures/linkedList.h"
-#include "./src/SystemComponents/processUnits.h"
+#include "linkedList.h"
+#include "../SystemComponents/processUnits.h"
 
 int main() {
     // Create a linked list

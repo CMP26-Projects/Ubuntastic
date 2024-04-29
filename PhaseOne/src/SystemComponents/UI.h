@@ -1,4 +1,5 @@
-#include "./src/dataStructures/queue.h"
+#pragma once
+#include "processUnits.h"
 
 // Uncomment the following line to enable debugging
 //#define DEBUG
@@ -35,39 +36,6 @@ void printError(char errorMsg[])
     perror(errorMsg);
 }
 
-int readFile(char* filePath, queue_t* q)
-{
-    int numProcesses = 0;
-    int id, runTime, arrivalTime, priority;
-    char dummy[100];
-    FILE *inputFile = fopen(filePath, "r");
-    if (!inputFile)
-    {
-        perror("Error in opening the processes.txt file\n");
-        return -1;
-    }
-    fgets(dummy, sizeof(dummy), inputFile); //Ignoring the first line
-
-    while (fscanf(inputFile, "%d\t%d\t%d\t%d\n", &id, &arrivalTime, &runTime, &priority) == 4)
-    {
-        //Read the process data and creating a process 
-        int info*=(int*) malloc(4*sizeof(int));
-        info[0]=id;
-        info[1]=arrivalTime;
-        info[2]=runTime;
-        info[3]=priority;
-        processMsg msg=createMsg(info);
-        enqueue(q,&msg);
-        numProcesses++;
-    }
-    fclose(inputFile);
-    //Testing
-    
-    #ifdef DEBUG
-    printf("Number of processes: %d\n", numProcesses);
-    #endif
-    return numProcesses;
-}
 
 
 void getUserInput(int *schedAlgo, int *timeSlice) //Will get updated and support GUI 
@@ -109,7 +77,7 @@ void insertIntoLog(state_t state,float* pInfo)
         exit(-1);
     }
 
-    char st[10];
+    char st[30];
     switch (state)
     {
     case STARTED:
@@ -128,11 +96,11 @@ void insertIntoLog(state_t state,float* pInfo)
         strcpy(st, "▶️ resumed ▶️");
         break;
     }
-    fprintf(file, "AT time %d process %d %s total %d remain %d wait %d ", getClk(), pInfo[0], st, pInfo[1], pInfo[2], pInfo[3]);
+    fprintf(file, "AT time %d process %.2f %s total %.2f remain %.2f wait %.2f ", getClk(), pInfo[0], st, pInfo[1], pInfo[2], pInfo[3]);
     
     if (state == FINISHED)
     {
-        fprintf(file, "TA %d WTA %.2f",pInfo[4] ,pInfo[5]);
+        fprintf(file, "TA %.2f WTA %.2f",pInfo[4] ,pInfo[5]);
     }
     fprintf(file, "\n");
     fclose(file);

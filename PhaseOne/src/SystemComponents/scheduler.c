@@ -5,14 +5,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <stdint.h>
 #include<math.h>
-#include "./src/SystemComponents/scheduler.h"
+
+#include "scheduler.h"
+#include "../dataStructures/minHeap.h"
+#include "../dataStructures/queue.h"
+
 int msgid;
 bool receivingFlag=true;
 int main(int argc, char *argv[])
 {
+
+
+    //Set the signals handlers  
+    signal(SIGCHLD,finishProcess);
+    signal(SIGUSR1,receiveProcesses);
+    signal(SIGINT,clearResources);
+    msgid = createMessageQueue();
+    initClk();
     sch=createScheduler(argc,argv);
-    clk_t startTime=getClk();
+
     switch(sch->algo){
     case SRTN_t:
         SRTNAlgo();
@@ -27,18 +40,13 @@ int main(int argc, char *argv[])
         printError("INVALID SCHEDULING ALGORITM");
         break;
     }
-    float* schStatistics=calculateStatistics;
+    float* schStatistics=calculateStatistics();
     generatePrefFile(schStatistics);
-    destroyPCB();
-    int totalElapsedtime = getClk()-startTime;
-    char* line=sprintf("the scheduler has finished in time : %d\n", totalElapsedtime);
-    printLine(line,MAG);
     exit(sch->totalProcessesNum);
 }
 
 scheduler_t* createScheduler(int argc,char** args)
 {    
-
     scheduler_t* sch=(scheduler_t*)malloc(sizeof(scheduler_t));
     //Initalize the scheduler data members
     sch->algo=atoi(args[2]); 
@@ -51,6 +59,8 @@ scheduler_t* createScheduler(int argc,char** args)
     sch->totalWTAT=0.0;
     sch->busyTime=0;
     sch->pcb=createLinkedList(freeSlot,compareSlot);
+    //Instantiate the connection with clk & Process_gen & processes
+
     switch(sch->algo)
     {
         case RR_t:
@@ -58,23 +68,15 @@ scheduler_t* createScheduler(int argc,char** args)
             break;
         
         case HPF_t:
-            sch->readyContainer = createMinHeap(comparePriority);
+            sch->readyContainer = createHeap(comparePriority,printProcess);
             break;
 
         case SRTN_t:
-            sch->readyContainer = createMinHeap(compareRemTime);
+            sch->readyContainer = createHeap(compareRemTime,printProcess);
             break;
-    }
-    
-    //Instantiate the connection with clk & Process_gen & processes
-    initClk();
-    msgid = createMessageQueue();
+            default:
 
-    //Set the signals handlers  
-    signal(SIGCHLD,finishProcess);
-    signal(SIGUSR1,receiveProcesses);
-    signal(SIGINT,clearResources);
-    
+    }
     //Displaying the start of scheduler 
     #ifdef DEUBG
         displayScheduler(sch->algo);
@@ -98,10 +100,6 @@ void receiveProcesses(int signum)
         //Create a process of the recieved data
         process_t* p = createProcess(msg.data);
         
-        #ifdef DEUBG
-            char* line=sprintf("Process %d was sent to the scheduler succesfully at time clock %d \n",P->ID,getClk());
-            printLine(line,GRN);
-        #endif
         //Set this process as the last received one 
         sch->lastRecieved=p;
 
@@ -154,7 +152,8 @@ void insertIntoPCB(process_t* p, pid_t pid)
 //Get the process info using the UNIX pid
 process_t* getProcessByID(pid_t pid)
 {
-    node_t* node= getNodeByValue(sch->pcb,pid);
+    void* apid = (void*)(intptr_t)pid;
+    node_t* node= getNodeByValue(sch->pcb,(void*)apid);
     if(node!=NULL)
     {
         return ((pcb_slot*)(node->data))->process;
@@ -183,7 +182,7 @@ void continueProcess(process_t* p)
         else
         {
             updatePCB(p,RESUMED);
-            kill(getProcessID(p),SIGCONT);
+            kill(getPID(p),SIGCONT);
         }
         updateOutfile(p);
     }
@@ -201,6 +200,7 @@ float* calculateStatistics()
 
 pid_t getPID(process_t* p)
 {
+    
     node_t* node= getNodeByValue(sch->pcb,p);
     if(node!=NULL)
     {
@@ -290,7 +290,8 @@ void finishProcess(int signum)
         sch->totalWTAT+=p->WTAT; //Updating the total weighted turnaround time
         sch->finishedProcessesNum++; //Increment the finished processes count
         updateOutfile(p); //Update the output file 
-        freeSlot(getNodeByValue(sch->pcb,processID));
+        void* apid = (void*)(intptr_t)processID;
+        freeSlot(getNodeByValue(sch->pcb,(void*)apid));
         sch->runningP=NULL; //Free the running process to choose the next one
     }
     else{
@@ -302,7 +303,7 @@ void finishProcess(int signum)
 
 void SRTNAlgo()
 {
-    int lastClk = getTime();
+    int lastClk = getClk();
 
     while (true)
     {
@@ -349,9 +350,9 @@ void SRTNAlgo()
     }
 }
 
-void HPF_Algo()
+void HPFAlgo()
 {
-    int lastClk = getTime();
+    int lastClk = getClk();
     while (true)
     {
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
@@ -386,9 +387,9 @@ void HPF_Algo()
     }
 }
 
-void RR_Algo(int timeSlice)
+void RRAlgo(int timeSlice)
 {
-    int lastClk = getTime();
+    int lastClk = getClk();
     while (true)
     {
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
@@ -443,27 +444,40 @@ void insertIntoReady(process_t* p)
 
 void removeFromReady()
 {
-    (sch->algo==RR_t)?dequeue(sch->readyContainer):deleteMin(sch->readyContainer);
+    if(sch->algo==RR_t)
+        dequeue(sch->readyContainer);
+    else
+        deleteMin(sch->readyContainer);
     
 }
 
 process_t* getNextReady()
 {
-   return (sch->algo==RR_t)?front(sch->readyContainer):getMin(sch->readyContainer);
+    if(sch->algo==RR_t)
+        return front(sch->readyContainer);
+    else
+        return getMin(sch->readyContainer);
 }
 
 bool isReadyEmpty()
 {
-    return (sch->algo==RR_t)?isEmptyQueue(sch->readyContainer):isEmptyHeap(sch->readyContainer);
+    if(sch->algo==RR_t)
+        return isEmptyQueue(sch->readyContainer);
+    else
+        return isEmptyHeap(sch->readyContainer);
 }
 
 void destroyReady()
-{   
-    (sch->algo==RR_t)?destroyQueue(sch->readyContainer):destroyHeap(sch->readyContainer);
+{
+    if(sch->algo==RR_t)
+        destroyQueue(sch->readyContainer);
+    else
+        destroyHeap(sch->readyContainer);   
 }
 
 void clearResources(int signum)
 {
     destroyReady();
+    destroyList(sch->pcb);
     destroyClk(true);
 }

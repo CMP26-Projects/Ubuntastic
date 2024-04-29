@@ -1,21 +1,18 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "./src/dataStructures/minHeap.h"
+#include "minHeap.h"
 
 // Function to create a new heap
-minHeap_t *createHeap(size_t capacity, int (*compare)(const void *, const void *), void (*print)(const void *)) {
+minHeap_t *createHeap(int (*compare)(void *,void *), void (*print)(void *)) {
     minHeap_t *heap = (minHeap_t *)malloc(sizeof(minHeap_t));
     if (heap == NULL) {
-        fprintf(stderr, "Memory allocation failed!\n");
         exit(EXIT_FAILURE);
     }
-    heap->arr = (void **)malloc(capacity * sizeof(void *));
+    heap->arr = (void **)malloc(MAX_SIZE * sizeof(void *));
     if (heap->arr == NULL) {
-        fprintf(stderr, "Memory allocation failed!\n");
         exit(EXIT_FAILURE);
     }
-    heap->capacity = capacity;
+    heap->capacity = MAX_SIZE;
     heap->size = 0;
     heap->compare = compare;
     heap->print = print;
@@ -47,7 +44,6 @@ size_t rightChild(size_t index) {
 
 void insert(minHeap_t *heap, void *data) {
     if (heap->size >= heap->capacity) {
-        fprintf(stderr, "Heap overflow!\n");
         exit(EXIT_FAILURE);
     }
     size_t index = heap->size;
@@ -102,4 +98,10 @@ void printHeap(minHeap_t *heap) {
     for (size_t i = 0; i < heap->size; i++) {
         heap->print(heap->arr[i]);
     }
+}
+
+void destroyHeap(minHeap_t* heap)
+{
+    while(!isEmptyHeap(heap))
+        deleteMin(heap);
 }

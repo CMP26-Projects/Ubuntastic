@@ -1,7 +1,8 @@
-#include "./src/SystemComponents/headers.h"
+#pragma once
+#include "headers.h"
 #define TYPE_CHECK(ptr, type) _Generic((ptr), type: 1, default: 0) //For searching by val function 
 
-typedef enum processState
+typedef enum
 {   
     ARRIVED,   
     STARTED,
@@ -33,14 +34,14 @@ typedef struct pcb_slot
 
 process_t* createProcess(int info[]);
 
-void printProcess(process_t* p);
+void printProcess(void* data);
 
-int comparePriority(process_t* a, process_t* b);
+int comparePriority(void* a ,void* b);
 
-int compareRemTime(process_t* a, process_t* b);
+int compareRemTime(void* a ,void* b);
 
 pcb_slot* createSlot(int id, process_t* p);
 
-bool compareSlot(pcb_slot* slot ,void* key);
+int compareSlot(void* data ,void* key);
 
-void* freeSlot(pcb_slot* slot);
+void freeSlot(void*);

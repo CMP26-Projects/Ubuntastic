@@ -1,4 +1,4 @@
-#include "./src/SystemComponents/processUnits.h"
+#include "processUnits.h"
 
 process_t* createProcess(int processInfo[])
 {
@@ -13,8 +13,9 @@ process_t* createProcess(int processInfo[])
     return P;
 }
 
-void printProcess(process_t* temp)
+void printProcess(void* data)
 {
+    process_t* temp=(process_t*)data;
     if(temp!=NULL)
     printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, ", temp->ID, temp->AT, temp->RT, temp->priority, temp->RemT);
     switch (temp->state)
@@ -47,13 +48,17 @@ void printProcess(process_t* temp)
 
 
 
-int comparePriority(process_t* a, process_t* b)
+int comparePriority(void* A ,void* B)
 {
+    process_t*a=(process_t*)A;
+    process_t*b=(process_t*)B;
     return a->priority - b->priority;
 }
 
-int compareRemTime(process_t* a, process_t* b)
+int compareRemTime(void* A ,void* B)
 {
+    process_t*a=(process_t*)A;
+    process_t*b=(process_t*)B;
     return a->RemT - b->RemT;
 }
 
@@ -65,9 +70,10 @@ pcb_slot* createSlot(int id,process_t* p)
     slot->process=p;
 }
 
-bool compareSlot(pcb_slot* slot,void* key)
+int compareSlot(void* data,void* key)
 {
-    if (TYPE_CHECK(key, pid_t *) && *(pid_t *)key == &slot->pid) 
+    pcb_slot* slot=(pcb_slot*)data;
+    if (TYPE_CHECK(key, pid_t *) && (pid_t *)key == &slot->pid) 
         return true; // Node with matching PID found
     else if (TYPE_CHECK(key, process_t *) && (process_t *)key == slot->process)
         return true; // Node with matching process pointer found
@@ -75,8 +81,9 @@ bool compareSlot(pcb_slot* slot,void* key)
         return false;
 }
 
-void* freePCB(pcb_slot* slot)
+void freeSlot(void* data)
 {
+    pcb_slot* slot=(pcb_slot*)data;
     if(slot!=NULL&&slot->process!=NULL)
     {
         free(slot->process);

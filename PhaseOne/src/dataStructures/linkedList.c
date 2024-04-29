@@ -1,10 +1,8 @@
-#include "./src/dataStructures/linkedList.h"
-
+#include "linkedList.h"
 list_t* createLinkedList(void (*freeData)(void *),int (*compare)(void *, void *))
 {
     list_t* list = (list_t*)malloc(sizeof(list_t));
     if (list == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
         exit(1);
     }
     list->freeData=freeData;
@@ -59,7 +57,6 @@ void deleteUsingVal(list_t* list, void *value)
     }
 
     if (current == NULL) {
-        printf("Node with value not found\n");
         return;
     }
 

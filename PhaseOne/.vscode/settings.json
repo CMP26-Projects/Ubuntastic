@@ -64,6 +64,8 @@
     "node.h": "c",
     "linkedList.h": "c",
     "queue.h": "c",
-    "stdio.h": "c"
+    "stdio.h": "c",
+    "ui.h": "c",
+    "stdbool.h": "c"
   }
 }

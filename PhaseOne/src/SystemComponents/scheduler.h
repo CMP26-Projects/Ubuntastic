@@ -1,8 +1,6 @@
 #pragma once
-#include "./src/SystemComponents/headers.h"
-#include "./src/SystemComponents/UI.h"
-#include "./src/SystemComponents/processUnits.h"
-#include "./src/dataStructures/linkedList.h"
+#include "UI.h"
+#include "../dataStructures/linkedList.h"
 
 typedef struct 
 {
@@ -35,6 +33,7 @@ void updatePCB(process_t* p,state_t state);
 void finishProcess(int signum);
 void updateOutfile(process_t* p);
 void clearResources(int signum);
+float* calculateStatistics();
 
 //Ready container functions
 void insertIntoReady(process_t* p);
@@ -43,7 +42,7 @@ process_t* getNextReady();
 bool isReadyEmpty();
 void destroyReady();
 
-///TO DO             
+//Scheduling Algorithms
 void SRTNAlgo();
 void HPFAlgo();
 void RRAlgo(int);

@@ -1,15 +1,16 @@
-#include "./src/SystemComponents/headers.h"
-#include "./src/dataStructures/node.h"
+#pragma once
+#include "node.h"
+
 typedef struct {
     node_t *front;
     node_t *rear;
-    size_t size;
+    int size;
 } queue_t;
 
 
 queue_t *createQueue();
 
-int isEmpty(queue_t  *queue);
+int isEmptyQueue(queue_t  *queue);
 
 void enqueue(queue_t  *queue, void *data);
 
