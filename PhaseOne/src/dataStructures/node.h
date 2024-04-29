@@ -1,5 +1,6 @@
 #pragma once
 #include <stdlib.h>
+#define DEBUG
 typedef struct Node
 {
     void* data;

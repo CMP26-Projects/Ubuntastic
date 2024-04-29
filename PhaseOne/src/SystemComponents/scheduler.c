@@ -6,7 +6,7 @@
 #include <string.h>
 #include <signal.h>
 #include <stdint.h>
-#include<math.h>
+#include <math.h>
 
 #include "scheduler.h"
 #include "../dataStructures/minHeap.h"
@@ -17,8 +17,8 @@ bool receivingFlag=true;
 int main(int argc, char *argv[])
 {
     //Set the signals handlers
-    signal(SIGUSR2,finishProcess);
     signal(SIGUSR1,receiveProcesses);
+    signal(SIGUSR2,finishProcess);
     signal(SIGINT,clearResources);
     msgid = createMessageQueue();
     initClk();
@@ -66,7 +66,6 @@ scheduler_t* createScheduler(int argc,char** args)
     #ifdef DEBUG
     printf("The scheduler has been created with the algorithm %d\n",sch->algo);
     #endif
-    sleepMilliseconds(1000);
     switch(sch->algo)
     {
         case RR_t:
@@ -86,9 +85,7 @@ scheduler_t* createScheduler(int argc,char** args)
     printf("The ready container has been created\n");
     #endif
     //Displaying the start of scheduler 
-    #ifdef DEUBG
     displayScheduler(sch->algo);
-    #endif
     return sch;
 }
 
@@ -96,7 +93,7 @@ scheduler_t* createScheduler(int argc,char** args)
 void receiveProcesses(int signum)
 {
     #ifdef DEBUG
-    printf("Yalla bena\n");
+    printf("inside recieve Process\n");
     #endif
     processMsg msg;
     while(true)
@@ -109,13 +106,12 @@ void receiveProcesses(int signum)
         printf("msg = %d \n",msgReceiving);
         #endif
 
-        bool receivedBefore=( sch->lastRecieved != NULL && sch->lastRecieved->ID == msg.data[0]);
-        if(msgReceiving == -1 || receivedBefore) //The queue is empty: no processes arrive at this timestamp
+        if(msgReceiving == -1) //The queue is empty: no processes arrive at this timestamp
         {
             printf("The queue is empty\n");
             break;
         }
-        
+
         //Create a process of the recieved data
         process_t* p = createProcess(msg.data);
         
@@ -124,6 +120,7 @@ void receiveProcesses(int signum)
         printf("The process has been created\n");
         printProcess(p);
         #endif
+
         //Set this process as the last received one 
         sch->lastRecieved=p;
 
@@ -190,6 +187,9 @@ process_t* getProcessByID(pid_t pid)
 
 void stopProcess(process_t* p)
 {
+    #ifdef DEBUG
+    printf("The process %d will be stopped\n",p->ID);
+    #endif
     sch->runningP=NULL;
     updatePCB(p,STOPPED);
     insertIntoReady(p);
@@ -199,6 +199,9 @@ void stopProcess(process_t* p)
 
 void continueProcess(process_t* p)
 {
+    #ifdef DEBUG
+    printf("The process %d will be resumed\n",p->ID);
+    #endif
     sch->runningP=p;
     if(p->RT==p->RemT) //The first time to run this process
         startProcess(p);
@@ -305,6 +308,9 @@ void updateOutfile(process_t* p)
 
 void finishProcess(int signum)
 {
+    #ifdef DEBUG
+    printf("inside finish process\n");
+    #endif
     //NOTE: NOT FINISHED YET!!!
     int exitCode;
     wait(&exitCode);
@@ -344,6 +350,7 @@ void SRTNAlgo()
 
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
             continue;
+        
         #ifdef DEBUG
         printf("new time %d\n" ,lastClk);
         #endif
@@ -353,30 +360,62 @@ void SRTNAlgo()
         receivingFlag = true; //Reset the flag to true to receive the new processes at the next time stamp
 
         process_t* shortest = getNextReady();
-        if (isReadyEmpty() && sch->runningP==NULL) //There is no ready processes to run, so no need to process anything
-            continue;
-
-        else if (sch->runningP==NULL&&!isReadyEmpty()) //There is no process running process, so run the next ready process if exists.
+        if(!isReadyEmpty())
         {
-            sch->runningP = shortest;
-            removeFromReady();
-            continueProcess(sch->runningP);
+            #ifdef DEBUG
+            printf("ready is not empty = %d\n",shortest->ID);
+            #endif
+            if(sch->runningP!=NULL && sch->runningP->state != FINISHED && shortest->RemT < sch->runningP->RemT)
+            {
+                #ifdef DEBUG
+                printf("it's not the shortest\n");
+                #endif
+                stopProcess(sch->runningP);
+                sch->runningP = shortest;
+                removeFromReady();
+                continueProcess(sch->runningP);
+            }
+            else if(sch->runningP==NULL)
+            {
+                #ifdef DEBUG
+                printf("No running processes\n");
+                #endif
+                sch->runningP = shortest;
+                continueProcess(shortest);
+                #ifdef DEBUG
+                printf("Let's remove from ready\n");
+                #endif
+                removeFromReady();
+                #ifdef DEBUG
+                printf("we have removed ready\n");
+                #endif
+                
+            }
+            else
+            {
+                #ifdef DEBUG
+                printf("just update\n");
+                #endif
+                sch->runningP->RemT--; //Decrement the remaining time of the running process
+            }
         }
         else
         {
-            //Check that the running process is the shortest process
-            if(!isReadyEmpty() && sch->runningP->state != FINISHED && shortest->RemT < sch->runningP->RemT)
+            #ifdef DEBUG
+            printf("ready is empty\n");
+            #endif
+            if(sch->runningP!=NULL)
             {
-            stopProcess(sch->runningP);
-            sch->runningP = shortest;
-            removeFromReady();
-            continueProcess(sch->runningP);
-            }
-            else
-            {            
-            sch->runningP->RemT--; //Decrement the remaining time of the running process
+                #ifdef DEBUG
+                printf("just decrement\n");
+                #endif
+                sch->runningP->RemT--; //Decrement the remaining time of the running process
+
             }
         }
+        #ifdef DEBUG
+        printf("we finished a loop for a timeclk %d\n",getClk());
+        #endif
     }
 }
 
@@ -480,15 +519,39 @@ void insertIntoReady(process_t* p)
 
 void removeFromReady()
 {
+    #ifdef DEBUG
+        printf("inside dremove from ready\n");
+    #endif
     if(sch->algo==RR_t)
+    {
+        #ifdef DEBUG
+            printf("delete from RR\n");
+        #endif
         dequeue(sch->readyContainer);
+        #ifdef DEBUG
+            printf("deleted from RR\n");
+        #endif
+    }
     else
+    {
+        #ifdef DEBUG
+            printf("delete from heap\n");
+        #endif
         deleteMin(sch->readyContainer);
-    
+        #ifdef DEBUG
+            printf("deleted from heap\n");
+        #endif
+    }
+    #ifdef DEBUG
+    printf("we have removed\n");
+    #endif            
 }
 
 process_t* getNextReady()
 {
+    #ifdef DEBUG
+    printf("inside getNext = %d\n",sch->algo);
+    #endif
     if(sch->algo==RR_t)
         return front(sch->readyContainer);
     else
@@ -497,6 +560,10 @@ process_t* getNextReady()
 
 bool isReadyEmpty()
 {
+    #ifdef DEBUG
+    printf("inside isReady = %d\n",sch->algo);
+    #endif
+
     if(sch->algo==RR_t)
         return isEmptyQueue(sch->readyContainer);
     else

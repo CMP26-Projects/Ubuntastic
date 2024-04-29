@@ -1,5 +1,6 @@
 #pragma once
 #include <stdbool.h>
+#define DEBUG
 #define MAX_SIZE 10000
 typedef struct {
     void **arr;

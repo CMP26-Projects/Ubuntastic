@@ -4,7 +4,7 @@
 queue_t *createQueue() {
     queue_t  *queue = (queue_t *)malloc(sizeof(queue_t));
     if (queue == NULL) {
-        exit(EXIT_FAILURE);
+        return NULL;
     }
     queue->front = queue->rear = NULL;
     queue->size = 0;
@@ -13,6 +13,13 @@ queue_t *createQueue() {
 
 // Function to check if the queue is empty
 int isEmptyQueue(queue_t  *queue) {
+    #ifdef DEBUG
+    if(queue==NULL)
+    {
+        printf("Queue is NULL\n");
+        return 1;
+    }
+    #endif
     return queue->front == NULL;
 }
 
@@ -29,9 +36,9 @@ void enqueue(queue_t  *queue, void *data) {
 }
 
 // Function to dequeue an element from the queue
-void *dequeue(queue_t  *queue) {
+void* dequeue(queue_t  *queue) {
     if (isEmptyQueue(queue)) {
-        exit(EXIT_FAILURE);
+        return (void*)NULL;
     }
     node_t *temp = queue->front;
     void *data = temp->data;
@@ -44,7 +51,7 @@ void *dequeue(queue_t  *queue) {
 // Function to get the front element of the queue without removing it
 void *front(queue_t  *queue) {
     if (isEmptyQueue(queue)) {
-        exit(EXIT_FAILURE);
+        return NULL;
     }
     return queue->front->data;
 }

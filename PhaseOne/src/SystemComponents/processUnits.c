@@ -52,13 +52,15 @@ int comparePriority(void* A ,void* B)
 {
     process_t*a=(process_t*)A;
     process_t*b=(process_t*)B;
-    return a->priority - b->priority;
+    if(a!=NULL&&b!=NULL)
+        return a->priority - b->priority;
 }
 
 int compareRemTime(void* A ,void* B)
 {
     process_t*a=(process_t*)A;
     process_t*b=(process_t*)B;
+    if(a!=NULL&&b!=NULL)
     return a->RemT - b->RemT;
 }
 

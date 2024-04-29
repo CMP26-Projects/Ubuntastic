@@ -19,16 +19,25 @@ int main(int agrc, char *argv[])
     #ifdef DEBUG
     printf("The process started with pid= %d \n", processID);
     #endif    
-
-    sleepMilliseconds(10);
+    clk_t lastClk=getClk();
     while (remainingTime>0)
     { 
+        if(getClk()==lastClk)
+        continue;
+        lastClk++;
         remainingTime=runTime+startTime-getClk();
+        #ifdef DEBUG
+        printf("Reminaing for process %d = %d \n", processID,remainingTime);
+        #endif    
     }
+    #ifdef DEBUG
+    printf("The process %d has finished and i will notify scheduler with pid %d\n", processID,getppid());
+    #endif
     //Clear Resources
     destroyClk(false);
     //Notify scheduler that the process has finished(it will send SIGCHLD to the scheduler)
-    kill(getppid(),SIGUSR1);
+
+    kill(getppid(),SIGUSR2);
     //Return the real process ID to remove its slot from the PCB
     exit(processID);
 }

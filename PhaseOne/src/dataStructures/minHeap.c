@@ -6,11 +6,11 @@
 minHeap_t *createHeap(int (*compare)(void *,void *), void (*print)(void *)) {
     minHeap_t *heap = (minHeap_t *)malloc(sizeof(minHeap_t));
     if (heap == NULL) {
-        exit(EXIT_FAILURE);
+        return NULL;
     }
     heap->arr = (void **)malloc(MAX_SIZE * sizeof(void *));
     if (heap->arr == NULL) {
-        exit(EXIT_FAILURE);
+        return NULL;
     }
     heap->capacity = MAX_SIZE;
     heap->size = 0;
@@ -44,7 +44,7 @@ size_t rightChild(size_t index) {
 
 void insert(minHeap_t *heap, void *data) {
     if (heap->size >= heap->capacity) {
-        exit(EXIT_FAILURE);
+        return;
     }
     size_t index = heap->size;
     heap->arr[index] = data;
@@ -57,8 +57,9 @@ void insert(minHeap_t *heap, void *data) {
     }
 }
 
-void heapify(minHeap_t *heap, size_t index) {
+void heapify(minHeap_t *heap, size_t index) {    
     size_t smallest = index;
+    
     size_t left = leftChild(index);
     size_t right = rightChild(index);
 
@@ -67,6 +68,7 @@ void heapify(minHeap_t *heap, size_t index) {
     if (right < heap->size && heap->compare(heap->arr[right], heap->arr[smallest]) < 0)
         smallest = right;
 
+    
     if (smallest != index) {
         swap(&heap->arr[index], &heap->arr[smallest]);
         heapify(heap, smallest);
@@ -83,6 +85,7 @@ void *getMin(minHeap_t *heap) {
 void deleteMin(minHeap_t* heap)
 {
      if (heap->size == 0) {
+
         return;
     }
     if (heap->size == 1) {
@@ -92,6 +95,7 @@ void deleteMin(minHeap_t* heap)
     heap->arr[0] = heap->arr[heap->size - 1];
     heap->size--;
     heapify(heap, 0);
+    return;
 }
 
 void printHeap(minHeap_t *heap) {

@@ -35,6 +35,9 @@ int main(int argc, char *argv[])
     }
     else if (clk == 0)
     {
+        #ifdef DEBUG
+            printf("I'm the clock\n");
+        #endif
         char *args[] = {"./clk.out",(char *)NULL};
         execv(args[0],args);
         perror("Execl process has failed for creating the clock\n");
@@ -42,7 +45,6 @@ int main(int argc, char *argv[])
     }
     else
     {
-
         //Initialize the clock
         //Initiate and create scheduler process.    
         pid_t scheduler = fork();
@@ -53,6 +55,9 @@ int main(int argc, char *argv[])
         }
         else if (scheduler == 0)
         {
+            #ifdef DEBUG
+                printf("I'm the scheduler\n");
+            #endif
             //Read the scheduler input to send it
             char n[5], s[5], sw[5], t[5];
             sprintf(n, "%d", numProcesses);
@@ -65,10 +70,14 @@ int main(int argc, char *argv[])
         }
         else
         {   
+            //Initiate and create the process generator process.
             initClk();
-            sleepMilliseconds(500);
             clk_t lastClk=getClk();
+            #ifdef DEBUG
+                printf("I'm the generator and the Ids of scheduler and clk are %d - %d \n",clk,scheduler);
+            #endif
             process_t* P=front(ProcessQueue);
+            printProcess(P);
             while (true)
             {
                 clk_t curTime = getClk();
@@ -78,7 +87,7 @@ int main(int argc, char *argv[])
 
                 lastClk++;
 
-                while (P != NULL && curTime >= P->AT)
+                while (P != NULL && curTime == P->AT)
                 {
                     processMsg sendingProcess=createProcessMessage(P);
                     int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data),IPC_NOWAIT);
@@ -91,17 +100,17 @@ int main(int argc, char *argv[])
                         printf("there is an error in sending");
                     dequeue(ProcessQueue);
                     P = front(ProcessQueue);
+                    printProcess(P);
                 }
                     kill(scheduler, SIGUSR1);
-                    sleepMilliseconds(20);
 
                 #ifdef DEBUG
                     printf("generator at time clk %d\n", getClk());
                 #endif
             }
-        waitpid(scheduler, NULL, 0);
             //Waits for the scheduler to terminate
         }
+        waitpid(scheduler, NULL, 0);
         }
 }
 

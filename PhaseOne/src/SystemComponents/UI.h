@@ -23,6 +23,7 @@ void displayScheduler(int algo)
         exit(-1);
         break;
     }
+    printf("%s",NRM);
 }
 
 void printLine(char line[],char* clr)

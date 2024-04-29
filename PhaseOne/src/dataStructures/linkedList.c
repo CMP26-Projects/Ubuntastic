@@ -3,7 +3,7 @@ list_t* createLinkedList(void (*freeData)(void *),int (*compare)(void *, void *)
 {
     list_t* list = (list_t*)malloc(sizeof(list_t));
     if (list == NULL) {
-        exit(1);
+        return NULL;
     }
     list->freeData=freeData;
     list->head = NULL;
