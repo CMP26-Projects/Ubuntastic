@@ -1,30 +1,28 @@
 #include <string.h>
 #include <signal.h>
-#include "UI.h"
+#include "headers.h"
+#include "processUnits.h"
 #include "../dataStructures/queue.h"
-
 int msgid;
 queue_t* ProcessQueue;
-pid_t scheduler;
-int readFile(char* filePath, queue_t* q);
 void clearResources(int);
 int readFile(char*,queue_t*);
 void getUserInput(int*, int*); //Will get updated and support GUI 
-void sendProcess(int*); //Create a message of the process data and send it to the scheduler
+processMsg createProcessMessage(process_t*); //Create a message of the process data to send it to the scheduler
 
 int main(int argc, char *argv[])
 {
-    msgid = createMessageQueue();
-    signal(SIGINT, clearResources); //If it gets interrupted, clear the resources 
-    int timeSlice=2;
-    int schedAlgo=atoi(argv[2]);
-    ProcessQueue=createQueue();
-    if(argc>3 && schedAlgo==RR_t)
-        timeSlice=atoi(argv[3]);
-    
+    // int schedAlgo=atoi(argv[2]);
+    // if(argc>3&&schedAlgo==RR)
+    // timeSlice=atoi(argv[3]);
 
+    msgid = createMessageQueue();
+    int timeSlice,schedAlgo;
+    signal(SIGINT, clearResources); //If it gets interrupted, clear the resources 
+
+    ProcessQueue=createQueue();
     //Read the input files.
-    int numProcesses = readFile(argv[1],ProcessQueue);
+    int numProcesses = readFile(argv[1], ProcessQueue);
     //Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     getUserInput(&schedAlgo, &timeSlice);
     
@@ -37,17 +35,17 @@ int main(int argc, char *argv[])
     }
     else if (clk == 0)
     {
-        char *args[] = {"clk.out",(char *)NULL};
-        execv(realpath(args[0],NULL),args);
+        char *args[] = {"./clk.out",(char *)NULL};
+        execv(args[0],args);
         perror("Execl process has failed for creating the clock\n");
         exit(-1);
     }
     else
     {
+
         //Initialize the clock
-        initClk();
         //Initiate and create scheduler process.    
-        scheduler = fork();
+        pid_t scheduler = fork();
         if (scheduler == -1)
         {
             perror("Error in Forking the scheduler\n");
@@ -60,73 +58,58 @@ int main(int argc, char *argv[])
             sprintf(n, "%d", numProcesses);
             sprintf(s, "%d", schedAlgo);
             sprintf(t, "%d", timeSlice);
-            char *args[] = {"scheduler.out", n, s, t, (char *)NULL};
-            execv(realpath(args[0],NULL),args);
+            char *args[] = {"./scheduler.out", n, s, t, (char *)NULL};
+            execv(args[0],args);
             perror("Execl process has failed for creating the scheduler\n");
             exit(-1);
         }
         else
-        {
-            sleepMilliseconds(100);
-            printf("hi fterasd as e\n");
-
-            //Create the message queue to send the process info to the scheduler
-            int* processInfo =front(ProcessQueue);
-            int lastClk = getClk();
-
+        {   
+            initClk();
+            sleepMilliseconds(500);
+            clk_t lastClk=getClk();
+            process_t* P=front(ProcessQueue);
             while (true)
             {
-                if (lastClk == getClk())  //It's the same timeclk, so no need to process anything
-                {
+                clk_t curTime = getClk();
+                
+                if(curTime==lastClk)
                     continue;
-                }
 
-                //Send All the processes at this timeStamp
-                while (processInfo != NULL && getClk() >= processInfo[1]) //Check Arrival
-                {
-                    sendProcess(processInfo);
-                    dequeue(ProcessQueue);
-                    processInfo=front(ProcessQueue);
-                }
-
-                //Send signal to the scheduler to receive processes
-                kill(scheduler, SIGUSR1);
-                sleepMilliseconds(100); //Make a small delay to ensure the processes has been received in the scheduler
                 lastClk++;
+
+                while (P != NULL && curTime >= P->AT)
+                {
+                    processMsg sendingProcess=createProcessMessage(P);
+                    int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data),IPC_NOWAIT);
+                    #ifdef DEBUG
+                        printf("generator sent process at time clk %d\n", getClk());
+                        printProcess(P);
+                    #endif
+
+                    if(msgSending==-1)
+                        printf("there is an error in sending");
+                    dequeue(ProcessQueue);
+                    P = front(ProcessQueue);
+                }
+                    kill(scheduler, SIGUSR1);
+                    sleepMilliseconds(20);
+
+                #ifdef DEBUG
+                    printf("generator at time clk %d\n", getClk());
+                #endif
             }
+        waitpid(scheduler, NULL, 0);
+            //Waits for the scheduler to terminate
         }
-    }
+        }
 }
 
-void sendProcess(int* processInfo)
-{
-    processMsg sendingProcess;
-    sendingProcess.mtype = 7;
-    sendingProcess.data[0]=processInfo[0];
-    sendingProcess.data[1]=processInfo[1];
-    sendingProcess.data[2]=processInfo[2];
-    sendingProcess.data[3]=processInfo[3];
-    int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data), !IPC_NOWAIT);
-    #ifdef DEBUG
-    printf("the process_gen has sent the process %d to the scheduler at time %d \n", processInfo[0], getClk());
-    #endif    
-
-    if(msgSending==-1)
-        printError("there is an error in sending");   
- }
-
-void clearResources(int signum)
-{
-    //Delete the processes shared memory
-    msgctl(msgid, IPC_RMID, (struct msqid_ds *)0);
-    destroyQueue(ProcessQueue);
-    kill(scheduler,SIGINT);
-    destroyClk(true);
-    signal(SIGINT,clearResources);
-}
-int readFile(char* filePath, queue_t* q)
+int readFile(char* filePath, queue_t* Pqueue)
 {
     int numProcesses = 0;
+    //Initialize the Process Queue
+
     int id, runTime, arrivalTime, priority;
     char dummy[100];
     FILE *inputFile = fopen(filePath, "r");
@@ -140,21 +123,63 @@ int readFile(char* filePath, queue_t* q)
     while (fscanf(inputFile, "%d\t%d\t%d\t%d\n", &id, &arrivalTime, &runTime, &priority) == 4)
     {
         //Read the process data and creating a process 
-        int* info=(int*) malloc(4*sizeof(int));
-        info[0]=id;
-        info[1]=arrivalTime;
-        info[2]=runTime;
-        info[3]=priority;
-        processMsg msg=createMsg(info);
-        enqueue(q,&msg);
+        int info[]={id,arrivalTime,runTime,priority};
+        process_t* pd = createProcess(info);
+        enqueue(Pqueue,pd);
         numProcesses++;
     }
     fclose(inputFile);
     //Testing
-    
-    #ifdef DEBUG
     printf("Number of processes: %d\n", numProcesses);
-    #endif
     return numProcesses;
 }
 
+
+void getUserInput(int *schedAlgo, int *timeSlice) //Will get updated and support GUI 
+{
+    Get_Scheduling_Algorithm: 
+    system("clear"); //Clear the terminal
+    printf("|| Choose a Scheduling Algorithm ||\n");
+    printf("For SRTN, Enter 0\nFor HPF, Enter 1\nFor RR, Enter 2\nAlgorithm: ");
+    scanf("%d", schedAlgo);
+    if (*schedAlgo> 2)
+    {
+        printf("Invalid Option ->\n");
+        sleep(1); 
+        goto Get_Scheduling_Algorithm;
+    }
+
+
+    if(*schedAlgo == 2)
+    {
+        //For RR get the time slice
+        Get_RR_timeSlice:
+            printf("||Enter the Time Slice||\nTime: ");
+            scanf("%d", timeSlice);
+            if (*timeSlice < 0)
+            {
+                printf("\nInvalid Option -> ");
+                goto Get_RR_timeSlice;
+            }
+    }
+    system("clear");
+}
+
+processMsg createProcessMessage(process_t* P)
+{
+    processMsg sendingProcess;
+    sendingProcess.mtype = 7;
+    sendingProcess.data[0] = P->ID;
+    sendingProcess.data[1] = P->AT;
+    sendingProcess.data[2] = P->RT;
+    sendingProcess.data[3] = P->priority;
+    return sendingProcess;
+}
+
+void clearResources(int signum)
+{
+    //Delete the processes shared memory
+    msgctl(msgid, IPC_RMID, (struct msqid_ds *)0);
+    destroyQueue(ProcessQueue);
+    signal(SIGINT,clearResources);
+}

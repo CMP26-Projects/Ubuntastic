@@ -38,35 +38,35 @@ void printError(char errorMsg[])
 
 
 
-void getUserInput(int *schedAlgo, int *timeSlice) //Will get updated and support GUI 
-{
-    Get_Scheduling_Algorithm: 
-    system("clear"); //Clear the terminal
-    printf("|| Choose a Scheduling Algorithm ||\n");
-    printf("For SRTN, Enter 0\nFor HPF, Enter 1\nFor RR, Enter 2\nAlgorithm: ");
-    scanf("%d", schedAlgo);
-    if (*schedAlgo> 2)
-    {
-        printf("Invalid Option ->\n");
-        sleepMilliseconds(500); 
-        goto Get_Scheduling_Algorithm;
-    }
+// void getUserInput(int *schedAlgo, int *timeSlice) //Will get updated and support GUI 
+// {
+//     Get_Scheduling_Algorithm: 
+//     system("clear"); //Clear the terminal
+//     printf("|| Choose a Scheduling Algorithm ||\n");
+//     printf("For SRTN, Enter 0\nFor HPF, Enter 1\nFor RR, Enter 2\nAlgorithm: ");
+//     scanf("%d", schedAlgo);
+//     if (*schedAlgo> 2)
+//     {
+//         printf("Invalid Option ->\n");
+//         sleepMilliseconds(500); 
+//         goto Get_Scheduling_Algorithm;
+//     }
 
 
-    if(*schedAlgo == 2)
-    {
-        //For RR get the time slice
-        Get_RR_timeSlice:
-            printf("||Enter the Time Slice||\nTime: ");
-            scanf("%d", timeSlice);
-            if (*timeSlice < 0)
-            {
-                printf("\nInvalid Option -> ");
-                goto Get_RR_timeSlice;
-            }
-    }
-    system("clear");
-}
+//     if(*schedAlgo == 2)
+//     {
+//         //For RR get the time slice
+//         Get_RR_timeSlice:
+//             printf("||Enter the Time Slice||\nTime: ");
+//             scanf("%d", timeSlice);
+//             if (*timeSlice < 0)
+//             {
+//                 printf("\nInvalid Option -> ");
+//                 goto Get_RR_timeSlice;
+//             }
+//     }
+//     system("clear");
+// }
 
 void insertIntoLog(state_t state,float* pInfo)
 {

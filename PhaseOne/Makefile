@@ -23,7 +23,7 @@ build: clean
 
 	gcc test_generator.c -o test_generator.out
 
-	@./process_generator.out ./processes.txt 0 2
+	@./process_generator.out ./processes.txt
 
 clean:
 	@rm -f *.out *.o *.log *.perf 

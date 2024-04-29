@@ -16,17 +16,20 @@ int msgid;
 bool receivingFlag=true;
 int main(int argc, char *argv[])
 {
-
-
-    //Set the signals handlers  
-    signal(SIGCHLD,finishProcess);
+    //Set the signals handlers
+    signal(SIGUSR2,finishProcess);
     signal(SIGUSR1,receiveProcesses);
     signal(SIGINT,clearResources);
     msgid = createMessageQueue();
     initClk();
     sch=createScheduler(argc,argv);
+    
+    #ifdef DEBUG
+    printf("oustside createScheduler =\n" );
+    #endif
 
-    switch(sch->algo){
+    switch(sch->algo)
+    {
     case SRTN_t:
         SRTNAlgo();
         break;
@@ -60,7 +63,10 @@ scheduler_t* createScheduler(int argc,char** args)
     sch->busyTime=0;
     sch->pcb=createLinkedList(freeSlot,compareSlot);
     //Instantiate the connection with clk & Process_gen & processes
-
+    #ifdef DEBUG
+    printf("The scheduler has been created with the algorithm %d\n",sch->algo);
+    #endif
+    sleepMilliseconds(1000);
     switch(sch->algo)
     {
         case RR_t:
@@ -75,31 +81,49 @@ scheduler_t* createScheduler(int argc,char** args)
             sch->readyContainer = createHeap(compareRemTime,printProcess);
             break;
             default:
-
     }
+    #ifdef DEBUG
+    printf("The ready container has been created\n");
+    #endif
     //Displaying the start of scheduler 
     #ifdef DEUBG
-        displayScheduler(sch->algo);
+    displayScheduler(sch->algo);
     #endif
+    return sch;
 }
 
 
 void receiveProcesses(int signum)
 {
+    #ifdef DEBUG
+    printf("Yalla bena\n");
+    #endif
     processMsg msg;
     while(true)
     {
+        //Receive the message from the message queue
+
         int msgReceiving = msgrcv(msgid, &msg, sizeof(msg.data), 7, IPC_NOWAIT);
         //Check this process is a new one
+        #ifdef DEBUG
+        printf("msg = %d \n",msgReceiving);
+        #endif
+
         bool receivedBefore=( sch->lastRecieved != NULL && sch->lastRecieved->ID == msg.data[0]);
         if(msgReceiving == -1 || receivedBefore) //The queue is empty: no processes arrive at this timestamp
         {
+            printf("The queue is empty\n");
             break;
         }
-
+        
         //Create a process of the recieved data
         process_t* p = createProcess(msg.data);
         
+
+        #ifdef DEBUG
+        printf("The process has been created\n");
+        printProcess(p);
+        #endif
         //Set this process as the last received one 
         sch->lastRecieved=p;
 
@@ -108,6 +132,10 @@ void receiveProcesses(int signum)
         //Increase the number of recieved processes
         sch->recievedProcessesNum++;
     }
+        #ifdef DEBUG
+        printf("OutSiede the fukin loop\n");
+        #endif
+    
     receivingFlag = false; //We finished receiving all the processes of this time clock
     signal(SIGUSR1,receiveProcesses);
 }
@@ -164,8 +192,9 @@ void stopProcess(process_t* p)
 {
     sch->runningP=NULL;
     updatePCB(p,STOPPED);
-    kill(getPID(p),SIGTSTP); //Send SIGSTOP to stop the process from execution
+    insertIntoReady(p);
     updateOutfile(p);
+    kill(getPID(p),SIGTSTP); //Send SIGSTOP to stop the process from execution
 }
 
 void continueProcess(process_t* p)
@@ -281,7 +310,9 @@ void finishProcess(int signum)
     wait(&exitCode);
     if (WIFEXITED(exitCode)) {
         int processID=WEXITSTATUS(exitCode);
+        #ifdef DEBUG
         printf("process with id %d has ended at time clock %d \n",processID, getClk());
+        #endif
         //Get the process that has finished
         process_t* p=getProcessByID(processID);
         updatePCB(p,FINISHED); //Update the pcb (state & TAT & WTAT)
@@ -298,38 +329,38 @@ void finishProcess(int signum)
         printError("Something went wrong with the exit code of a process.");
     }
     //Reassign the SIGCHLD signal to this function as a handler
-    signal(SIGCHLD,finishProcess);
+    signal(SIGUSR2,finishProcess);
 }
 
 void SRTNAlgo()
 {
+    #ifdef DEBUG
+    printf("SRTN Algorithm\n");
+    #endif
     int lastClk = getClk();
 
     while (true)
     {
+
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
             continue;
-        
+        #ifdef DEBUG
+        printf("new time %d\n" ,lastClk);
+        #endif
+
+        lastClk++;
         while (receivingFlag); //Wait to get all the processes arriving at this time stamp 
         receivingFlag = true; //Reset the flag to true to receive the new processes at the next time stamp
 
+        process_t* shortest = getNextReady();
         if (isReadyEmpty() && sch->runningP==NULL) //There is no ready processes to run, so no need to process anything
             continue;
 
-        process_t* shortest = getNextReady();
-
-        if (sch->runningP==NULL) //There is no process running process, so run the next ready process if exists.
+        else if (sch->runningP==NULL&&!isReadyEmpty()) //There is no process running process, so run the next ready process if exists.
         {
-            if(!isReadyEmpty())
-            {
             sch->runningP = shortest;
             removeFromReady();
             continueProcess(sch->runningP);
-            }
-            else
-            {
-                continue;
-            }
         }
         else
         {
@@ -346,12 +377,14 @@ void SRTNAlgo()
             sch->runningP->RemT--; //Decrement the remaining time of the running process
             }
         }
-        lastClk++;
     }
 }
 
 void HPFAlgo()
 {
+    #ifdef DEBUG
+    printf("HPF Algorithm\n");
+    #endif
     int lastClk = getClk();
     while (true)
     {
@@ -389,6 +422,9 @@ void HPFAlgo()
 
 void RRAlgo(int timeSlice)
 {
+    #ifdef DEBUG
+    printf("SRTN Algorithm\n");
+    #endif
     int lastClk = getClk();
     while (true)
     {

@@ -20,7 +20,7 @@ int main(int agrc, char *argv[])
     printf("The process started with pid= %d \n", processID);
     #endif    
 
-    sleepMilliseconds(100);
+    sleepMilliseconds(10);
     while (remainingTime>0)
     { 
         remainingTime=runTime+startTime-getClk();
@@ -28,7 +28,7 @@ int main(int agrc, char *argv[])
     //Clear Resources
     destroyClk(false);
     //Notify scheduler that the process has finished(it will send SIGCHLD to the scheduler)
-    
+    kill(getppid(),SIGUSR1);
     //Return the real process ID to remove its slot from the PCB
     exit(processID);
 }
