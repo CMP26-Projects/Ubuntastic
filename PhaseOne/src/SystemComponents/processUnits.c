@@ -1,5 +1,4 @@
 #include "processUnits.h"
-
 process_t* createProcess(int processInfo[])
 {
     process_t* P=(process_t*)malloc(sizeof(process_t));
@@ -65,16 +64,16 @@ int compareRemTime(void* A ,void* B)
 }
 
 
-pcb_slot* createSlot(int id,process_t* p)
+struct PCB* createSlot(int id,process_t* p)
 {
-    pcb_slot* slot=(pcb_slot*)malloc(sizeof(pcb_slot));
+    struct PCB* slot=(struct PCB*)malloc(sizeof(struct PCB));
     slot->pid=id;
     slot->process=p;
 }
 
 int compareSlot(void* data,void* key)
 {
-    pcb_slot* slot=(pcb_slot*)data;
+    struct PCB* slot=(struct PCB*)data;
     if (TYPE_CHECK(key, pid_t *) && (pid_t *)key == &slot->pid) 
         return true; // Node with matching PID found
     else if (TYPE_CHECK(key, process_t *) && (process_t *)key == slot->process)
@@ -83,12 +82,73 @@ int compareSlot(void* data,void* key)
         return false;
 }
 
-void freeSlot(void* data)
-{
-    pcb_slot* slot=(pcb_slot*)data;
-    if(slot!=NULL&&slot->process!=NULL)
+void freeSlot(struct PCB *slot)
+{ if(slot!=NULL&&slot->process!=NULL)
     {
         free(slot->process);
         free(slot);
     }
 }
+
+struct PCB* searchByID(int id)
+{
+    struct PCB *it = pcbHead;
+
+    while(it)
+    {
+        if(it->process->ID==id)
+            return it;
+        it=it->next;
+    }
+    return NULL;
+}
+
+struct PCB* searchByPid(int pid)
+{
+    struct PCB *it = pcbHead;
+
+    while(it)
+    {
+        if(it->pid==pid)
+            return it;
+        it=it->next;
+    }
+    return NULL;
+}
+
+void insertPCBslot(process_t *p, pid_t pid)
+{
+    struct PCB* pcbNode=(struct PCB*)malloc(sizeof(struct PCB));
+    pcbTail->next=pcbNode;
+    pcbTail=pcbNode;
+    pcbNode->process=p;
+    pcbNode->pid=pid;
+}
+
+bool deletePCBslot(process_t *p)
+{
+    struct PCB *it = pcbHead;
+    struct PCB *prev=NULL;
+    while(it)
+    {
+        if(it->process->ID==p->ID)
+            {
+                struct PCB *temp=it->next;
+                free(it);
+
+                return true;
+            }
+        it=it->next;
+    }
+
+    return false;
+}
+
+struct PCB* createLinkedList()
+{
+    pcbHead = (struct PCB*)malloc(sizeof(struct PCB));
+    pcbHead->next = NULL;
+    pcbTail->next=NULL;
+}
+
+

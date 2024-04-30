@@ -4,9 +4,8 @@ build: clean
 
 	gcc src/SystemComponents/clk.c headers.o -o clk.out
 	
-	gcc -c src/dataStructures/node.c
 	gcc -c src/dataStructures/queue.c
-	gcc -c src/dataStructures/linkedList.c
+
 	gcc -c src/dataStructures/minHeap.c
 
 	gcc -c src/SystemComponents/processUnits.c

@@ -16,6 +16,9 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include "minHeap.h"
+#include "linkedList.h"
+
 #define NRM  "\x1B[0m"
 #define RED  "\x1B[31m"
 #define GRN  "\x1B[32m"
@@ -36,7 +39,58 @@ typedef int clk_t;
 // Uncomment the following line to enable debugging
 #define DEBUG
 
+typedef enum
+{   
+    ARRIVED,   
+    STARTED,
+    RESUMED,
+    STOPPED,
+    FINISHED,   
+    WAITING //FOR PHASE 2
+}state_t;
 
+typedef struct
+{
+    int ID; //Simulated ID
+    int priority; //Priority
+    int RT; //Run time
+    int RemT; //Remaining time
+    int WT; //Waiting time 
+    int TAT; //Turnaround time
+    float WTAT; //Weighted turnaround time
+    clk_t AT; //Arrival time
+    clk_t lastRun; //Last time this process has run
+    state_t state; //Current state of the process
+}process_t;
+
+struct PCB
+{
+    struct PCB* next;
+    pid_t pid;
+    process_t* process;
+};
+
+
+struct Scheduler{
+int algo;
+struct PCB* pcb;
+process_t* runningP;
+process_t* lastRecieved;
+int timeSlice;
+int busyTime;
+int finishedProcessesNum;
+int recievedProcessesNum;
+int totalProcessesNum;
+int totalWT;
+float totalWTAT;
+void* readyContainer;
+};
+
+struct Scheduler* sch;
+
+struct PCB *pcbHead;
+struct PCB *pcbTail;
+int numOfSlots;
 ///Time Functions///
 
 ///==============================
@@ -67,3 +121,4 @@ typedef struct
 processMsg createMsg(int info[]);
 int createMessageQueue();
 int creatShMemory();
+

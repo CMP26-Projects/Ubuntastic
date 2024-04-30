@@ -7,10 +7,7 @@
 #include <signal.h>
 #include <stdint.h>
 #include <math.h>
-
 #include "scheduler.h"
-#include "../dataStructures/minHeap.h"
-#include "../dataStructures/queue.h"
 
 int msgid;
 bool receivingFlag=true;
@@ -22,7 +19,7 @@ int main(int argc, char *argv[])
     signal(SIGINT,clearResources);
     msgid = createMessageQueue();
     initClk();
-    sch=createScheduler(argc,argv);
+    createScheduler(argc,argv);
     
 
     switch(sch->algo)
@@ -45,9 +42,9 @@ int main(int argc, char *argv[])
     exit(sch->totalProcessesNum);
 }
 
-scheduler_t* createScheduler(int argc,char** args)
+void createScheduler(int argc,char** args)
 {    
-    scheduler_t* sch=(scheduler_t*)malloc(sizeof(scheduler_t));
+    sch=(struct Scheduler*)malloc(sizeof(struct Scheduler));
     //Initalize the scheduler data members
     sch->algo=atoi(args[2]); 
     sch->totalProcessesNum=atoi(args[1]);
@@ -58,7 +55,7 @@ scheduler_t* createScheduler(int argc,char** args)
     sch->totalWT=0;
     sch->totalWTAT=0.0;
     sch->busyTime=0;
-    sch->pcb=createLinkedList(freeSlot,compareSlot);
+    int x= createLinkedList();
     //Instantiate the connection with clk & Process_gen & processes
     #ifdef DEBUG
     printf("The scheduler has been created with the algorithm %d\n",sch->algo);
@@ -83,7 +80,6 @@ scheduler_t* createScheduler(int argc,char** args)
     #endif
     //Displaying the start of scheduler 
     displayScheduler(sch->algo);
-    return sch;
 }
 
 
@@ -161,27 +157,6 @@ void startProcess(process_t* p)
     }
 }
 
-//Create a new slot in the pcb for the process
-void insertIntoPCB(process_t* p, pid_t pid)
-{
-    p->lastRun=getClk();
-    p->WT=getClk()-(p->AT);
-    pcb_slot* newSlot = createSlot(pid,p);
-    insertAtEnd(sch->pcb,newSlot);
-    updatePCB(p,STARTED); //To be changed in phase2 
-}
-
-//Get the process info using the UNIX pid
-process_t* getProcessByID(pid_t pid)
-{
-    void* apid = (void*)(intptr_t)pid;
-    node_t* node= getNodeByValue(sch->pcb,(void*)apid);
-    if(node!=NULL)
-    {
-        return ((pcb_slot*)(node->data))->process;
-    }
-}
-
 void stopProcess(process_t* p)
 {
     #ifdef DEBUG
@@ -225,16 +200,6 @@ float* calculateStatistics()
     schStatistics[1] =sch->totalWTAT/sch->totalProcessesNum; //Avg_WTA
     schStatistics[2] =(float)sch->totalWT/sch->totalProcessesNum; //Avg_Waiting
     schStatistics[3] = (float)sqrt(sch->totalWTAT/ (float)(sch->totalProcessesNum- 1)); //StdWTAT
-}
-
-pid_t getPID(process_t* p)
-{
-    
-    node_t* node= getNodeByValue(sch->pcb,p);
-    if(node!=NULL)
-    {
-        return ((pcb_slot*)(node->data))->pid;
-    }
 }
 
 void updatePCB(process_t* p,state_t state) 
@@ -325,7 +290,7 @@ void finishProcess(int signum)
         sch->finishedProcessesNum++; //Increment the finished processes count
         updateOutfile(p); //Update the output file 
         void* apid = (void*)(intptr_t)processID;
-        freeSlot(getNodeByValue(sch->pcb,(void*)apid));
+        freeSlot(sch->pcb);
         sch->runningP=NULL; //Free the running process to choose the next one
     }
     else{

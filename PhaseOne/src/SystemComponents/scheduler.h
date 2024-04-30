@@ -1,27 +1,9 @@
 #pragma once
 #include "UI.h"
-#include "../dataStructures/linkedList.h"
-
-typedef struct 
-{
-int algo;
-list_t* pcb;
-process_t* runningP;
-process_t* lastRecieved;
-int timeSlice;
-int busyTime;
-int finishedProcessesNum;
-int recievedProcessesNum;
-int totalProcessesNum;
-int totalWT;
-float totalWTAT;
-void* readyContainer;
-}scheduler_t;
-
-scheduler_t* sch;
+#include "headers.h"
 
 //Functions definition
-scheduler_t* createScheduler();
+void createScheduler();
 void receiveProcesses(int signum);
 void startProcess(process_t* p);
 void insertIntoPCB(process_t* p,pid_t pid);
