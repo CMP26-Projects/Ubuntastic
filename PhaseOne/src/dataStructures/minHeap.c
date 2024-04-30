@@ -76,10 +76,15 @@ void heapify(minHeap_t *heap, size_t index) {
 }
 
 void *getMin(minHeap_t *heap) {
-    if (heap->size == 0) 
+    if (heap->size == 0)
         return NULL;
     else
+    {
+        #ifdef DEBUG
+        printf("The min here\n");
+        #endif  
         return heap->arr[0];
+    } 
 }
 
 void deleteMin(minHeap_t* heap)
@@ -87,9 +92,6 @@ void deleteMin(minHeap_t* heap)
      if (heap->size == 0) {
 
         return;
-    }
-    if (heap->size == 1) {
-        heap->size--;
     }
 
     heap->arr[0] = heap->arr[heap->size - 1];

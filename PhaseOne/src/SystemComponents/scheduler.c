@@ -24,9 +24,6 @@ int main(int argc, char *argv[])
     initClk();
     sch=createScheduler(argc,argv);
     
-    #ifdef DEBUG
-    printf("oustside createScheduler =\n" );
-    #endif
 
     switch(sch->algo)
     {
@@ -352,7 +349,7 @@ void SRTNAlgo()
             continue;
         
         #ifdef DEBUG
-        printf("new time %d\n" ,lastClk);
+        printf("new time %d\n" ,getClk());
         #endif
 
         lastClk++;
@@ -362,8 +359,8 @@ void SRTNAlgo()
         process_t* shortest = getNextReady();
         if(!isReadyEmpty())
         {
+            printf("ready is not empty \n");
             #ifdef DEBUG
-            printf("ready is not empty = %d\n",shortest->ID);
             #endif
             if(sch->runningP!=NULL && sch->runningP->state != FINISHED && shortest->RemT < sch->runningP->RemT)
             {
@@ -401,8 +398,8 @@ void SRTNAlgo()
         }
         else
         {
-            #ifdef DEBUG
             printf("ready is empty\n");
+            #ifdef DEBUG
             #endif
             if(sch->runningP!=NULL)
             {
@@ -563,11 +560,16 @@ bool isReadyEmpty()
     #ifdef DEBUG
     printf("inside isReady = %d\n",sch->algo);
     #endif
-
+    bool is;
     if(sch->algo==RR_t)
-        return isEmptyQueue(sch->readyContainer);
+        is= isEmptyQueue(sch->readyContainer);
     else
-        return isEmptyHeap(sch->readyContainer);
+        is= isEmptyHeap(sch->readyContainer);
+    #ifdef DEBUG
+    printf("is is %d\n",is);
+    #endif
+    
+    return is;
 }
 
 void destroyReady()
