@@ -32,21 +32,30 @@ void destroyClk(bool terminateAll)
     {
         killpg(getpgrp(), SIGINT);
     }
+
+}
+
+process_t* createProcess(int* info)
+{
+    process_t* pd = (process_t*)malloc(sizeof(process_t));
+    pd->ID = info[0];
+    pd->AT = info[1];
+    pd->RT = info[2];
+    pd->priority = info[3];
+    pd->RemT = info[2];
+    pd->state = ARRIVED;
+    pd->lastRun = -1;
+    pd->PID = -1;
+    pd->WT = 0;
+    pd->TAT = 0;
+    pd->WTAT = 0;
+    return pd;
 }
 
 //===============MessageQueue===============//
 
 
-processMsg createMsg(int info[])
-{
-    processMsg msg;
-    msg.mtype=7;
-    msg.data[0]=info[0];
-    msg.data[1]=info[1];
-    msg.data[2]=info[2];
-    msg.data[3]=info[3];
-    return msg;
-}
+
 int createMessageQueue()
 {
     key_t key_id;

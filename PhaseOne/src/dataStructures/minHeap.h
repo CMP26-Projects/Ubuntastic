@@ -1,10 +1,6 @@
 #ifndef _MINHEAP_H
 #define _MINHEAP_H
-#include "../SystemComponents/processUnits.h"
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdio.h>
-#define DEBUG
+#include "../SystemComponents/headers.h"
 #define MAX_SIZE 10000
 typedef struct {
     process_t** arr;

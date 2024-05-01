@@ -1,5 +1,10 @@
 #include "UI.h"
-#include "../dataStructures/queue.h"
+
+typedef struct
+{
+    long mtype;
+    int data[4];
+}processMsg;
 
 int msgid;
 queue_t* pQueue;
@@ -14,7 +19,8 @@ int main(int argc, char *argv[])
     // timeSlice=atoi(argv[3]);
 
     msgid = createMessageQueue();
-    int timeSlice=-1,schedAlgo=5;
+    int timeSlice=-1;
+    int schedAlgo=5;
     signal(SIGINT, clearResources); //If it gets interrupted, clear the resources 
 
     pQueue=createQueue();
@@ -23,11 +29,9 @@ int main(int argc, char *argv[])
     //Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     getUserInput(&schedAlgo, &timeSlice);
     
-    int totalProcesses = pQueue->size;
-    #ifdef DEBUG
-        sprintf(lineToPrint,"The total number of processes is %d\n",totalProcesses);
-        printLine(lineToPrint,GRN);
-    #endif
+    int totalProcesses = --pQueue->size;
+    sprintf(lineToPrint,"The total number of processes is %d\n",totalProcesses);
+    printLine(lineToPrint,GRN);
     
     //Initiate and create clock process.    
     pid_t clk = fork();
@@ -62,8 +66,8 @@ int main(int argc, char *argv[])
         {
 
             //Read the scheduler input to send it
-            char n[5], s[5], sw[5], t[5];
-            sprintf(n, "%d", totalProcesses-1);
+            char n[5], s[5], t[5];
+            sprintf(n, "%d", totalProcesses);
             sprintf(s, "%d", schedAlgo);
             sprintf(t, "%d", timeSlice);
 
@@ -86,9 +90,6 @@ int main(int argc, char *argv[])
                 print(lineToPrint,GRN);
                 sprintf(lineToPrint,"and the scheduler with pid = %d\n",scheduler);
                 print(lineToPrint,GRN);
-                sprintf(lineToPrint,"The first process to be sent %d\n", getClk());
-                printLine(lineToPrint,BLU);
-                printProcess(P,YEL);
             #endif
             while (true)
             {
@@ -98,11 +99,6 @@ int main(int argc, char *argv[])
                     continue;
                 else
                 {
-                    
-                #ifdef DEBUG
-                    sprintf(lineToPrint,"generator at time clk %d\n", getClk());
-                    printLine(lineToPrint,GRN);
-                #endif
                     lastClk++;
 
                 while (!isEmptyQueue(pQueue) &&P != NULL && curTime == P->AT)
@@ -111,23 +107,15 @@ int main(int argc, char *argv[])
                     int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data),!IPC_NOWAIT);
 
                     if(msgSending==-1)
-                    {
-                        printf("error in sending\n");
                         printError("No message to send\n");
-                    }
                     
                     #ifdef DEBUG
-                        sprintf(lineToPrint,"generator sent process at time clk %d\n", getClk());
+                        sprintf(lineToPrint,"Generator sent process at time clk %d\n", getClk());
                         printLine(lineToPrint,GRN);
                         printProcess(P,YEL);
                     #endif
                     dequeue(pQueue);
                     P = front(pQueue);
-                    #ifdef DEBUG
-                        sprintf(lineToPrint,"The next process to be sent %d\n", getClk());
-                        printLine(lineToPrint,GRN);
-                        printProcess(P,YEL);
-                    #endif
                 }
                     kill(scheduler, SIGUSR1);
                 }
@@ -135,9 +123,9 @@ int main(int argc, char *argv[])
             }
             //Waits for the scheduler to terminate
             #ifdef DEBUG
-                        sprintf(lineToPrint,"generator has finished sending and the queue size is %d\n", pQueue->size);
-                        printLine(lineToPrint,GRN);
-                        printProcess(P,YEL);
+                sprintf(lineToPrint,"generator has finished sending and the queue size is %d\n", pQueue->size);
+                printLine(lineToPrint,GRN);
+                printProcess(P,YEL);
             #endif
         }
     }

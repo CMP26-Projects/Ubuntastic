@@ -42,9 +42,7 @@ int main(int argc, char *argv[])
     while (1)
     {
         sleep(1);
-        sprintf(lineToPrint,"\x1B[1m"); //Bold
-        printLine(lineToPrint,GRN);
-        sprintf(lineToPrint,"Clock = %d\n",++(*shmaddr));
+        sprintf(lineToPrint,"\x1B\033[37m\033[41mClock = %d",++(*shmaddr));
         printLine(lineToPrint,GRN);
     }
 }

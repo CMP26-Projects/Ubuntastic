@@ -30,9 +30,9 @@ int main(int agrc, char *argv[])
         lastClk++;
         remainingTime=runTime+startTime-getClk();
         #ifdef DEBUG
-            sprintf(lineToPrint,"Reminaing for process %d", processID);
-            printLine(lineToPrint,GRN);
-            sprintf(lineToPrint,"= %d ", remainingTime);
+            sprintf(lineToPrint,"Reminaing for process (%d)", processID);
+            print(lineToPrint,GRN);
+            sprintf(lineToPrint," = %d ", remainingTime);
             printLine(lineToPrint,GRN);
         #endif    
     }
@@ -41,9 +41,9 @@ int main(int agrc, char *argv[])
     //Notify scheduler that the process has finished(it will send SIGCHLD to the scheduler)
     #ifdef DEBUG
         sprintf (lineToPrint,"The process %d has finished", processID);
-        printLine(lineToPrint,GRN);
-        sprintf (lineToPrint," at ttimeCLk %d\n", getClk());
-        printLine(lineToPrint,GRN);
+        print(lineToPrint,GRN);
+        sprintf (lineToPrint," at timeCLk %d", getClk());
+        print(lineToPrint,GRN);
         sprintf (lineToPrint," and i will notify scheduler with pid %d\n", getppid());
         printLine(lineToPrint,GRN);
     #endif
@@ -60,10 +60,10 @@ void stop(int signum)
     runTime=remainingTime;
     
     #ifdef DEBUG
-        sprintf(lineToPrint,"I'm the process %d will stop", processID);
-        printLine(lineToPrint,GRN);
-        sprintf(lineToPrint,"at time %d\n",getClk());
-        printLine(lineToPrint,GRN);
+        sprintf(lineToPrint,"I'm the process %d will stop ", processID);
+        print(lineToPrint,RED);
+        sprintf(lineToPrint,"at time %d",getClk());
+        printLine(lineToPrint,RED);
     #endif    
     
     raise(SIGSTOP);
@@ -74,9 +74,9 @@ void stop(int signum)
 void resume(int signum)
 {
     #ifdef DEBUG
-        sprintf(lineToPrint,"I'm the process %d will resumed", processID);
-        printLine(lineToPrint,GRN);
-        sprintf(lineToPrint,"at time %d\n",getClk());
+        sprintf(lineToPrint,"I'm the process %d will resume ", processID);
+        print(lineToPrint,GRN);
+        sprintf(lineToPrint,"at time %d",getClk());
         printLine(lineToPrint,GRN);
     #endif    
 

@@ -1,7 +1,7 @@
 #include "scheduler.h"
 int msgid;
 bool receivingFlag=true;
-
+char lineToPrint[1000];
 int main(int argc, char *argv[])
 {
     //Set the signals handlers
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
         HPFAlgo();
         break;
     case RR_t:
-        RRAlgo(atoi(argv[4]));
+        RRAlgo(atoi(argv[3]));
         break;
     default:
         printError("INVALID SCHEDULING ALGORITM");
@@ -34,7 +34,6 @@ scheduler_t* createScheduler(int argc,char* args[])
 {    
     scheduler_t* sc=(scheduler_t*)malloc(sizeof(scheduler_t));
     //Initalize the scheduler data members
-
     sc->pCount=atoi(args[1]);
     sc->algo=atoi(args[2]); 
     sc->receivedPCount=0;
@@ -44,9 +43,7 @@ scheduler_t* createScheduler(int argc,char* args[])
     sc->totalWT=0;
     sc->totalWTAT=0.0;
     sc->busyTime=0;
-    
-    sc->pcbList= createList();
-    sc->PCB=(PCB_t*)malloc((sc->pCount+1)*sizeof(PCB_t));
+    sc->PCB=(process_t**)malloc((sc->pCount+1)*sizeof(process_t*));
     
     //Instantiate the connection with clk & Process_gen & processes
 
@@ -63,12 +60,12 @@ scheduler_t* createScheduler(int argc,char* args[])
         case SRTN_t:
             sc->readyContainer = createHeap(SRTN_t);
             break;
+    
         default:
             printError("INVALID SCHEDULING ALGORITM");
             break;
     }
-        //Inform the user that the scheduler has been created with the chosen algorithm 
-        // displayScheduler(sc->algo);
+    //Inform the user that the scheduler has been created with the chosen algorithm 
     return sc;
 }
 
@@ -76,7 +73,6 @@ scheduler_t* createScheduler(int argc,char* args[])
 void receiveProcesses(int signum)
 {
     processMsg msg;
-    printf("receiving processes\n");
     while(true)
     {
         //Receive the message from the message queue
@@ -92,31 +88,17 @@ void receiveProcesses(int signum)
         process_t* p = createProcess(msg.data);
         
         //Set this process as the last received one 
-        printf("received process %d at timeClk%d\n",p->ID,getClk());
-        printProcess(p,GRN);
+        sprintf(lineToPrint,"Scheduler received process %d at timeClk%d\n",p->ID,getClk());
+        printLine(lineToPrint,GRN);
+        printProcess(p,NRM);
         //Add the new process to the scheduler container  (MinHeap|Queue)
         insertIntoReady(p);
 
         //Increase the number of recieved processes
         sch->receivedPCount++;
-        if(sch->algo==RR_t)
-            printQueue(sch->readyContainer,RED);
-        else
-            printHeap(sch->readyContainer,RED);
     }
-    printf("DONE receiving processes\n");
-
     receivingFlag = false; //We finished receiving all the processes of this time clock
     signal(SIGUSR1,receiveProcesses);
-}
-
-PCB_t* createPCB(pid_t id,process_t* p)
-{
-    PCB_t* pcb=(PCB_t*)malloc(sizeof(PCB_t));
-    pcb->pid=id;
-    pcb->process=p;
-    // insertSlot(sch->pcbList,id,pcb);
-    return pcb;
 }
 
 void startProcess(process_t* p)
@@ -142,9 +124,8 @@ void startProcess(process_t* p)
     {
         sch->runningP=p;
         p->state=STARTED;
-        // insertSlot(sch->pcbList,pid,p);
-        sch->PCB[p->ID].process=p;        
-        sch->PCB[p->ID].pid=pid;        
+        sch->PCB[p->ID]=p;      
+        sch->PCB[p->ID]->PID=pid;        
         updateOutfile(p);
     }
 }
@@ -154,9 +135,7 @@ void stopProcess(process_t* p)
     p->state=STOPPED;
     insertIntoReady(p); //Insert the process into the ready container
     updateOutfile(p);   //Update the log file
-    // PCB_t* pcb=getByProcess(sch->pcbList,p); //get the pcb pf this process
-    // pid_t pid=pcb->pid; //get the real process ID
-    kill(sch->PCB[p->ID].pid,SIGTSTP); //Send SIGSTOP to stop the process from execution
+    kill(sch->PCB[p->ID]->PID,SIGTSTP); //Send SIGSTOP to stop the process from execution
 }
 
 void continueProcess(process_t* p)
@@ -171,9 +150,8 @@ void continueProcess(process_t* p)
         p->WT=getClk()-busyTime-(p->AT); //Update the waiting time of the process
         p->lastRun=getClk(); //Set the last time this process has run
         p->state=RESUMED;
-        // PCB_t* pcb=getByProcess(sch->pcbList,p); //get the pcb pf this process
-        // pid_t pid=pcb->pid; //get the real process ID
-        kill(sch->PCB[p->ID].pid,SIGCONT); //Send SIGCONT to resume the process
+        kill(sch->PCB[p->ID]->PID,SIGCONT); //Send SIGCONT to resume the process
+        removeFromReady(); //Remove the process from the ready container
         updateOutfile(p);
     }
 }
@@ -186,6 +164,7 @@ float* calculateStatistics()
     schStatistics[1] =sch->totalWTAT/sch->pCount; //Avg_WTA
     schStatistics[2] =(float)sch->totalWT/sch->pCount; //Avg_Waiting
     schStatistics[3] = (float)sqrt(sch->totalWTAT/ (float)(sch->pCount- 1)); //StdWTAT
+    return schStatistics;
 }
 
 void updateOutfile(process_t* p)
@@ -196,9 +175,7 @@ void updateOutfile(process_t* p)
     info[2]=p->RemT;
     info[3]=p->WT;
     if(p->state!=FINISHED)
-    {
         insertIntoLog(p->state,info);
-    }
     else
     {
         info=(float*)realloc(info,6*sizeof(float));
@@ -221,15 +198,10 @@ void finishProcess(int signum)
     sch->totalWTAT+=p->WTAT; //Updating the total weighted turnaround time
     sch->finishedPCount++; //Increment the finished processes count
     updateOutfile(p); //Update the output file 
-    free(sch->PCB[p->ID].process);
+    free(sch->PCB[p->ID]);
     sch->runningP=NULL; //Free the running process to choose the next one
-    printf("end finish process\n");
     if(sch->finishedPCount==sch->pCount)
-    {
-        printf("FINISHED at timeClk =%d\n",getClk());
-        sleep(1);
         finishScheduling(0);
-    }
     //Reset the SIGCHLD signal to this function as a handler
     signal(SIGUSR2,finishProcess);
 }
@@ -237,22 +209,18 @@ void finishProcess(int signum)
 void SRTNAlgo()
 {
     int lastClk = getClk();
-    while (sch->finishedPCount < sch->pCount)
+    while (true)
     {
-
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
             continue;
         
-
         lastClk++;
         while (receivingFlag); //Wait to get all the processes arriving at this time stamp 
         receivingFlag = true; //Reset the flag to true to receive the new processes at the next time stamp
-
         process_t* shortest = getNextReady();
 
         if(!isReadyEmpty())
         {
-
             if(sch->runningP!=NULL && sch->runningP->state != FINISHED && shortest->RemT < sch->runningP->RemT)
             {
                 stopProcess(sch->runningP);
@@ -265,36 +233,28 @@ void SRTNAlgo()
                 removeFromReady();
             }
             else
-            {
                 sch->runningP->RemT--; //Decrement the remaining time of the running process
-            }
         }
         else
         {
-
             if(sch->runningP!=NULL)
-            {
                 sch->runningP->RemT--; //Decrement the remaining time of the running process
-            }
         }
-
     }
 }
 
 void HPFAlgo()
 {
     int lastClk = getClk();
-    while (sch->finishedPCount < sch->pCount)
+    while (true)
     {
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
             continue;
         while (receivingFlag); //Wait to get all the processes arriving at this time stamp 
         receivingFlag = true; //Reset the flag to true to receive the new processes at the next time stamp
 
-        printf("pCount= %d pFinished= %d\n",sch->finishedPCount , sch->pCount);   
         if (isReadyEmpty() && sch->runningP==NULL) //There is no ready processes to run, so no need to process anything
             continue;
-
 
         if (sch->runningP==NULL) //There is no process running process, so run the next ready process if exists.
         {
@@ -303,19 +263,15 @@ void HPFAlgo()
             continueProcess(shortest);
         }
         else
-        {
             sch->runningP->RemT--; //Decrement the remaining time of the running process
-        }
         lastClk++;
     }
-    printf("FINISHED\n");
-    sleep(1);
 }
 
 void RRAlgo(int timeSlice)
 {
     int lastClk = getClk();
-    while (sch->finishedPCount < sch->pCount)
+    while (true)
     {
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
             continue;
@@ -323,39 +279,31 @@ void RRAlgo(int timeSlice)
         while (receivingFlag); //Wait to get all the processes arriving at this time stamp 
         receivingFlag = true; //Reset the flag to true to receive the new processes at the next time stamp
 
-        if (isReadyEmpty() && sch->runningP==NULL) //There is no ready processes to run, so no need to process anything
-            continue;
-
         process_t* nextP = getNextReady();
-
-        if (sch->runningP==NULL)
+        if (!isReadyEmpty()) //There is no ready processes to run, so no need to process anything
         {
-            if(!isReadyEmpty())
+            if (sch->runningP!=NULL)
             {
-                sch->runningP = nextP;
-                removeFromReady();
-                continueProcess(sch->runningP);
+                bool finishedQuanta= (getClk()-(sch->runningP->lastRun))>timeSlice;
+                if(finishedQuanta)
+                {
+                    stopProcess(sch->runningP);
+                    removeFromReady();
+                    continueProcess(nextP);
+                }
+                else
+                    sch->runningP->RemT--; //Decrement the remaining time of the running process
             }
             else
             {
-                continue;
+                removeFromReady();
+                continueProcess(nextP);
             }
         }
         else
         {
-            //Check the process has finished the timeSlice or not.
-            bool finishedQuanta= (getClk()-(sch->runningP->lastRun))>timeSlice;
-            if(!isReadyEmpty() && sch->runningP->state != FINISHED && finishedQuanta)
-            {
-                stopProcess(sch->runningP);
-                sch->runningP = nextP;
-                removeFromReady();
-                continueProcess(sch->runningP);
-            }
-            else
-            {            
-            sch->runningP->RemT--; //Decrement the remaining time of the running process
-            }
+            if(sch->runningP!=NULL)
+                sch->runningP->RemT--; //Decrement the remaining time of the running process
         }
         lastClk++;
     }

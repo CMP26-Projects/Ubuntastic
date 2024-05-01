@@ -9,8 +9,6 @@
 #define CYN  "\x1B[36m"
 #define WHT  "\x1B[37m"
 #define BLD  "\x1B[1m"
-
-#include "processUnits.h"
 #include "../dataStructures/queue.h"
 #include "../dataStructures/minHeap.h"
 

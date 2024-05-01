@@ -15,7 +15,6 @@
 #include <math.h>
 #include <time.h>
 #include <stdbool.h>
-#include <errno.h>
 
 // Uncomment the following line to enable debugging
 #define DEBUG
@@ -46,18 +45,35 @@ void destroyClk(bool terminateAll);
  * Again, remember that the clock is only emulation!
  */
 
-//===============MessageQueue===============//
+//===============Structs===============//
+
+typedef enum
+{   
+    ARRIVED,   
+    STARTED,
+    RESUMED,
+    STOPPED,
+    FINISHED,   
+    WAITING //FOR PHASE 2
+}state_t;
 
 typedef struct
 {
-    long mtype;
-    int data[4];
-}processMsg;
-
-
+    pid_t PID; //Actual ID
+    int ID; //Simulated ID
+    int priority; //Priority
+    int RT; //Run time
+    int RemT; //Remaining time
+    int WT; //Waiting time 
+    int TAT; //Turnaround time
+    float WTAT; //Weighted turnaround time
+    clk_t AT; //Arrival time
+    clk_t lastRun; //Last time this process has run
+    state_t state; //Current state of the process
+}process_t;
+process_t* createProcess(int* info);
 //===============MessageQueue===============//
 
 
-processMsg createMsg(int info[]);
 int createMessageQueue();
 int creatShMemory();

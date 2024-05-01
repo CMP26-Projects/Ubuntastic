@@ -1,6 +1,4 @@
 #include "UI.h"
-
-
 queue_t* readFile(char* filePath, queue_t* Pqueue)
 {
     int numProcesses = 0;
@@ -71,6 +69,7 @@ void getUserInput(int *schedAlgo, int *timeSlice) //Will get updated and support
 }
 void displayScheduler(int algo)
 {
+    printLine("The Scheduler Algorithm is: ",BLU);
     system("clear");
     char* Line="--------------------SCHEDULER ALGORITHM--------------------";
     switch (algo)
@@ -89,7 +88,6 @@ void displayScheduler(int algo)
         break;
     default:
         printLine("INVALID SCHEDULING ALGORITHM\n",RED);
-        exit(-1);
         break;
     }
 }

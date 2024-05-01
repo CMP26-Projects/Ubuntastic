@@ -1,5 +1,12 @@
 #include "UI.h"
 
+
+typedef struct
+{
+    long mtype;
+    int data[4];
+}processMsg;
+
 typedef struct Scheduler{
 int algo;
 process_t* runningP;
@@ -12,8 +19,7 @@ int pCount;
 int totalWT;
 float totalWTAT;
 void* readyContainer;
-List_t* pcbList;
-PCB_t* PCB;
+process_t** PCB;
 }scheduler_t;
 
 scheduler_t* sch;
@@ -27,7 +33,6 @@ void receiveProcesses(int signum);
 void startProcess(process_t* p);
 void stopProcess(process_t* p);
 void continueProcess(process_t* p);
-PCB_t* createPCB(pid_t id,process_t* p);
 void finishProcess(int signum);
 
 //Statistics Functions

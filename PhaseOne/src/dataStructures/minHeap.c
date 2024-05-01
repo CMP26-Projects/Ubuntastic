@@ -65,13 +65,11 @@ int compare(minHeap_t* heap,process_t* a, process_t* b)
 
 void insert(minHeap_t *heap, process_t *data) {
     int index = heap->size;
-    printf("heap size is %d\n",heap->size);
     heap->arr[index] = data;
     heap->size++;
 
     // Bubble up the newly inserted element
     while (index > 0 && compare(heap,heap->arr[index], heap->arr[parent(index)]) < 0){
-        printf("SWAPPING %d\n",heap->size); 
         swap(&heap->arr[index], &heap->arr[parent(index)]);
         index = parent(index);
     }
@@ -100,9 +98,6 @@ process_t* getMin(minHeap_t *heap) {
         return NULL;
     else
     {
-        #ifdef DEBUG
-        printf("The min is here\n");
-        #endif  
         return heap->arr[0];
     } 
 }
