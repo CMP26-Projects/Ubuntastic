@@ -1,4 +1,8 @@
 #include "processUnits.h"
+
+///////////////////////////////////////////
+///////////////Process Functions///////////
+///////////////////////////////////////////
 process_t* createProcess(int processInfo[])
 {
     process_t* P=(process_t*)malloc(sizeof(process_t));
@@ -11,144 +15,110 @@ process_t* createProcess(int processInfo[])
     P->WT=0;
     return P;
 }
+///////////////////////////////////////////
+/////////////////PCB List//////////////////
+///////////////////////////////////////////
 
-void printProcess(void* data)
+List_t* createList()
 {
-    process_t* temp=(process_t*)data;
-    if(temp!=NULL)
-    printf("ID: %d, AT: %d, RT: %d, Priority: %d, RemT: %d, ", temp->ID, temp->AT, temp->RT, temp->priority, temp->RemT);
-    switch (temp->state)
+    List_t* list=(List_t*)malloc(sizeof(List_t));
+    list->head=NULL;
+    list->tail=NULL;
+    list->size=0;
+    return list;
+}
+
+// PCB_t* insertSlot(List_t* list,pid_t id,process_t* p)
+// {
+//     PCB_t* pcbNode=(PCB_t*)malloc(sizeof(PCB_t));
+//     pcbNode->pid=id;
+//     pcbNode->process=p;
+//     if(list->head==NULL)
+//     {
+//         list->head=pcbNode;
+//         list->tail=pcbNode;
+//     }
+//     else
+//     {
+//         list->tail->next=pcbNode;
+//         list->tail=pcbNode;
+//     }
+//     list->size++;
+//     return pcbNode;
+// }
+
+// PCB_t* getByPid(List_t* list, pid_t key)
+// {
+//     PCB_t* it = list->head;
+
+//     while(it)
+//     {
+//         if(it->process->ID==key)
+//             return it;
+//         it=it->next;
+//     }
+//     return NULL;
+// }
+
+// PCB_t* getByProcess(List_t* list, process_t* key)
+// {
+//     PCB_t* it = list->head;
+    
+//     while(it)
+//     {
+//         if(it->process==key)
+//             return it;
+//         it=it->next;
+//     }
+//     return NULL;
+// }
+
+void freeSlotData(PCB_t* slot)
+{ 
+    if(slot!=NULL)
     {
-    case FINISHED:
-        printf("State: FINISHED\n");
-        break;
-    
-    case WAITING:
-        printf("State: WAITING\n");
-        break;
-    
-    case RESUMED:
-        printf("State: RESUMED\n");
-        break;
-    
-    case STOPPED:
-        printf("State: STOPPED\n");
-        break;
-    
-    case ARRIVED:
-        printf("State: ARRIVED\n");
-        break;
-            
-    default:
-        printf("State: STARTED\n");
-        break;
-    }
-}
+        if(slot->process!=NULL)
+            free(slot->process);
 
-
-
-int comparePriority(void* A ,void* B)
-{
-    process_t*a=(process_t*)A;
-    process_t*b=(process_t*)B;
-    if(a!=NULL&&b!=NULL)
-        return a->priority - b->priority;
-}
-
-int compareRemTime(void* A ,void* B)
-{
-    process_t*a=(process_t*)A;
-    process_t*b=(process_t*)B;
-    if(a!=NULL&&b!=NULL)
-    return a->RemT - b->RemT;
-}
-
-
-struct PCB* createSlot(int id,process_t* p)
-{
-    struct PCB* slot=(struct PCB*)malloc(sizeof(struct PCB));
-    slot->pid=id;
-    slot->process=p;
-}
-
-int compareSlot(void* data,void* key)
-{
-    struct PCB* slot=(struct PCB*)data;
-    if (TYPE_CHECK(key, pid_t *) && (pid_t *)key == &slot->pid) 
-        return true; // Node with matching PID found
-    else if (TYPE_CHECK(key, process_t *) && (process_t *)key == slot->process)
-        return true; // Node with matching process pointer found
-    else
-        return false;
-}
-
-void freeSlot(struct PCB *slot)
-{ if(slot!=NULL&&slot->process!=NULL)
-    {
-        free(slot->process);
         free(slot);
     }
 }
 
-struct PCB* searchByID(int id)
-{
-    struct PCB *it = pcbHead;
+// bool deleteSlot(List_t* list ,process_t* p)
+// {
+//     PCB_t* it = list->head;
+//     PCB_t* prev = NULL;
+//     while(it)
+//     {
+//         if(it->process==p)
+//         {
+//             if(prev==NULL)
+//             {
+//                 list->head=it->next;
+//             }
+//             else
+//             {
+//                 prev->next=it->next;
+//             }
+//             freeSlotData(it);
+//             (list->size)--;
+//             return true;
+//         }
+//         prev=it;
+//         it=it->next;
+//     }
+//     return false;
+// }
 
-    while(it)
-    {
-        if(it->process->ID==id)
-            return it;
-        it=it->next;
-    }
-    return NULL;
-}
-
-struct PCB* searchByPid(int pid)
-{
-    struct PCB *it = pcbHead;
-
-    while(it)
-    {
-        if(it->pid==pid)
-            return it;
-        it=it->next;
-    }
-    return NULL;
-}
-
-void insertPCBslot(process_t *p, pid_t pid)
-{
-    struct PCB* pcbNode=(struct PCB*)malloc(sizeof(struct PCB));
-    pcbTail->next=pcbNode;
-    pcbTail=pcbNode;
-    pcbNode->process=p;
-    pcbNode->pid=pid;
-}
-
-bool deletePCBslot(process_t *p)
-{
-    struct PCB *it = pcbHead;
-    struct PCB *prev=NULL;
-    while(it)
-    {
-        if(it->process->ID==p->ID)
-            {
-                struct PCB *temp=it->next;
-                free(it);
-
-                return true;
-            }
-        it=it->next;
-    }
-
-    return false;
-}
-
-struct PCB* createLinkedList()
-{
-    pcbHead = (struct PCB*)malloc(sizeof(struct PCB));
-    pcbHead->next = NULL;
-    pcbTail->next=NULL;
-}
-
-
+// void destroyList(List_t* list)
+// {
+//     PCB_t* it = list->head;
+//     PCB_t* temp;
+//     while(it)
+//     {
+//         temp=it;
+//         it=it->next;
+//         freeSlotData(temp);
+//     }
+//     free(list);
+// }

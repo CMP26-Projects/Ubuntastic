@@ -1,27 +1,18 @@
-#include <stdio.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
-#include <sys/types.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <stdint.h>
-#include <math.h>
 #include "scheduler.h"
-
 int msgid;
 bool receivingFlag=true;
+
 int main(int argc, char *argv[])
 {
     //Set the signals handlers
     signal(SIGUSR1,receiveProcesses);
     signal(SIGUSR2,finishProcess);
-    signal(SIGINT,clearResources);
-    msgid = createMessageQueue();
-    initClk();
-    createScheduler(argc,argv);
-    
+    signal(SIGINT,finishScheduling);
 
+    msgid = createMessageQueue();
+    
+    initClk();
+    sch=createScheduler(argc,argv);
     switch(sch->algo)
     {
     case SRTN_t:
@@ -37,97 +28,95 @@ int main(int argc, char *argv[])
         printError("INVALID SCHEDULING ALGORITM");
         break;
     }
-    float* schStatistics=calculateStatistics();
-    generatePrefFile(schStatistics);
-    exit(sch->totalProcessesNum);
 }
 
-void createScheduler(int argc,char** args)
+scheduler_t* createScheduler(int argc,char* args[])
 {    
-    sch=(struct Scheduler*)malloc(sizeof(struct Scheduler));
+    scheduler_t* sc=(scheduler_t*)malloc(sizeof(scheduler_t));
     //Initalize the scheduler data members
-    sch->algo=atoi(args[2]); 
-    sch->totalProcessesNum=atoi(args[1]);
-    sch->recievedProcessesNum=0;
-    sch->finishedProcessesNum=0;
-    sch->runningP=NULL;
-    sch->lastRecieved=NULL;
-    sch->totalWT=0;
-    sch->totalWTAT=0.0;
-    sch->busyTime=0;
-    int x= createLinkedList();
+
+    sc->pCount=atoi(args[1]);
+    sc->algo=atoi(args[2]); 
+    sc->receivedPCount=0;
+    sc->finishedPCount=0;
+    sc->runningP=NULL;
+    sc->lastRecieved=NULL;
+    sc->totalWT=0;
+    sc->totalWTAT=0.0;
+    sc->busyTime=0;
+    
+    sc->pcbList= createList();
+    sc->PCB=(PCB_t*)malloc((sc->pCount+1)*sizeof(PCB_t));
+    
     //Instantiate the connection with clk & Process_gen & processes
-    #ifdef DEBUG
-    printf("The scheduler has been created with the algorithm %d\n",sch->algo);
-    #endif
-    switch(sch->algo)
+
+    switch(sc->algo)
     {
         case RR_t:
-            sch->readyContainer = createQueue();
+            sc->readyContainer = createQueue();
             break;
         
         case HPF_t:
-            sch->readyContainer = createHeap(comparePriority,printProcess);
+            sc->readyContainer = createHeap(HPF_t);
             break;
 
         case SRTN_t:
-            sch->readyContainer = createHeap(compareRemTime,printProcess);
+            sc->readyContainer = createHeap(SRTN_t);
             break;
-            default:
+        default:
+            printError("INVALID SCHEDULING ALGORITM");
+            break;
     }
-    #ifdef DEBUG
-    printf("The ready container has been created\n");
-    #endif
-    //Displaying the start of scheduler 
-    displayScheduler(sch->algo);
+        //Inform the user that the scheduler has been created with the chosen algorithm 
+        // displayScheduler(sc->algo);
+    return sc;
 }
 
 
 void receiveProcesses(int signum)
 {
-    #ifdef DEBUG
-    printf("inside recieve Process\n");
-    #endif
     processMsg msg;
+    printf("receiving processes\n");
     while(true)
     {
         //Receive the message from the message queue
-
-        int msgReceiving = msgrcv(msgid, &msg, sizeof(msg.data), 7, IPC_NOWAIT);
+        int msgReceiving = msgrcv(msgid, &msg, sizeof(msg.data), 12,IPC_NOWAIT);
         //Check this process is a new one
-        #ifdef DEBUG
-        printf("msg = %d \n",msgReceiving);
-        #endif
+        int x= getClk();
 
-        if(msgReceiving == -1) //The queue is empty: no processes arrive at this timestamp
+        if (msgReceiving == -1)
         {
-            printf("The queue is empty\n");
             break;
         }
-
         //Create a process of the recieved data
         process_t* p = createProcess(msg.data);
         
-
-        #ifdef DEBUG
-        printf("The process has been created\n");
-        printProcess(p);
-        #endif
-
         //Set this process as the last received one 
-        sch->lastRecieved=p;
-
+        printf("received process %d at timeClk%d\n",p->ID,getClk());
+        printProcess(p,GRN);
         //Add the new process to the scheduler container  (MinHeap|Queue)
         insertIntoReady(p);
+
         //Increase the number of recieved processes
-        sch->recievedProcessesNum++;
+        sch->receivedPCount++;
+        if(sch->algo==RR_t)
+            printQueue(sch->readyContainer,RED);
+        else
+            printHeap(sch->readyContainer,RED);
     }
-        #ifdef DEBUG
-        printf("OutSiede the fukin loop\n");
-        #endif
-    
+    printf("DONE receiving processes\n");
+
     receivingFlag = false; //We finished receiving all the processes of this time clock
     signal(SIGUSR1,receiveProcesses);
+}
+
+PCB_t* createPCB(pid_t id,process_t* p)
+{
+    PCB_t* pcb=(PCB_t*)malloc(sizeof(PCB_t));
+    pcb->pid=id;
+    pcb->process=p;
+    // insertSlot(sch->pcbList,id,pcb);
+    return pcb;
 }
 
 void startProcess(process_t* p)
@@ -144,50 +133,47 @@ void startProcess(process_t* p)
         char id[5], rt[5];
         sprintf(id, "%d", p->ID);
         sprintf(rt, "%d", p->RT);
-        char *args[] = {"process.out", id, rt, (char *)NULL};
-        execv(realpath(args[0],NULL),args);
+        char *args[] = {"./process.out", id, rt, (char *)NULL};
+        execv(args[0],args);
         printError("Execl process has failed for creating the process\n");
         exit(-1);
     }
     else
     {
         sch->runningP=p;
-        insertIntoPCB(p,pid);
+        p->state=STARTED;
+        // insertSlot(sch->pcbList,pid,p);
+        sch->PCB[p->ID].process=p;        
+        sch->PCB[p->ID].pid=pid;        
         updateOutfile(p);
     }
 }
 
 void stopProcess(process_t* p)
 {
-    #ifdef DEBUG
-    printf("The process %d will be stopped\n",p->ID);
-    #endif
-    sch->runningP=NULL;
-    updatePCB(p,STOPPED);
-    insertIntoReady(p);
-    updateOutfile(p);
-    kill(getPID(p),SIGTSTP); //Send SIGSTOP to stop the process from execution
+    p->state=STOPPED;
+    insertIntoReady(p); //Insert the process into the ready container
+    updateOutfile(p);   //Update the log file
+    // PCB_t* pcb=getByProcess(sch->pcbList,p); //get the pcb pf this process
+    // pid_t pid=pcb->pid; //get the real process ID
+    kill(sch->PCB[p->ID].pid,SIGTSTP); //Send SIGSTOP to stop the process from execution
 }
 
 void continueProcess(process_t* p)
 {
-    #ifdef DEBUG
-    printf("The process %d will be resumed\n",p->ID);
-    #endif
     sch->runningP=p;
     if(p->RT==p->RemT) //The first time to run this process
         startProcess(p);
     else
     {
-        //It has run before
-
-        if(p->RemT<=0) //It has finished(wouldn't be handled with the SIGCHLD ??) 
-            updatePCB(p,FINISHED);
-        else
-        {
-            updatePCB(p,RESUMED);
-            kill(getPID(p),SIGCONT);
-        }
+        //It has run before        else
+        int busyTime=(p->RT)-(p->RemT); //Get the total time this process has run
+        p->WT=getClk()-busyTime-(p->AT); //Update the waiting time of the process
+        p->lastRun=getClk(); //Set the last time this process has run
+        p->state=RESUMED;
+        // PCB_t* pcb=getByProcess(sch->pcbList,p); //get the pcb pf this process
+        // pid_t pid=pcb->pid; //get the real process ID
+        kill(sch->PCB[p->ID].pid,SIGCONT); //Send SIGCONT to resume the process
         updateOutfile(p);
     }
 }
@@ -197,56 +183,11 @@ float* calculateStatistics()
 {
     float* schStatistics=(float*)malloc(4*sizeof(float));
     schStatistics[0] = (sch->busyTime*100) / (float)getClk(); //CPU_Utiliziation
-    schStatistics[1] =sch->totalWTAT/sch->totalProcessesNum; //Avg_WTA
-    schStatistics[2] =(float)sch->totalWT/sch->totalProcessesNum; //Avg_Waiting
-    schStatistics[3] = (float)sqrt(sch->totalWTAT/ (float)(sch->totalProcessesNum- 1)); //StdWTAT
+    schStatistics[1] =sch->totalWTAT/sch->pCount; //Avg_WTA
+    schStatistics[2] =(float)sch->totalWT/sch->pCount; //Avg_Waiting
+    schStatistics[3] = (float)sqrt(sch->totalWTAT/ (float)(sch->pCount- 1)); //StdWTAT
 }
 
-void updatePCB(process_t* p,state_t state) 
-{
-    //For phase 1 -> ARRIVED==STARTED (since this function is only invoked if the process is about to get executed)
-    //There's not a case where the process can
-    switch (state)
-    {
-        case STARTED: //For phase 2 (I guess in this phase I think start process do this)
-        {
-            break;
-        }
-        case RESUMED:
-        {
-            //Set this timestamp as the last time this process has run
-            int busyTime=(p->RT)-(p->RemT);
-            p->WT=getClk()-busyTime-(p->AT);
-            p->lastRun=getClk();
-            break;
-        }
-        case STOPPED:
-        {
-            break;
-        }
-        case FINISHED:
-        {
-            //Set the turnaround time of the process
-            p->TAT=getClk()-p->AT;
-            p->WTAT=(float)p->TAT/p->RT;
-            p->WT=getClk()-(p->RT)-(p->AT);
-            break;
-        }
-    
-        //case WAITING: (phase2)
-        //     {
-        //         pcb[index].id=index;
-        //         pcb[index].state=Pstate;
-        //         pcb[index].AT=p->AT;
-        //         pcb[index].RemT=(p->RT);
-        //         pcb[index].RT=p->RT;
-        //         pcb[index].state=Pstate;
-        //         pcb[index].Priority=p->Priority;
-        //     }
-        //     break;
-    }
-    p->state=state;
-}
 void updateOutfile(process_t* p)
 {
     float* info=(float*)malloc(4*sizeof(float));
@@ -270,148 +211,96 @@ void updateOutfile(process_t* p)
 
 void finishProcess(int signum)
 {
-    #ifdef DEBUG
-    printf("inside finish process\n");
-    #endif
-    //NOTE: NOT FINISHED YET!!!
-    int exitCode;
-    wait(&exitCode);
-    if (WIFEXITED(exitCode)) {
-        int processID=WEXITSTATUS(exitCode);
-        #ifdef DEBUG
-        printf("process with id %d has ended at time clock %d \n",processID, getClk());
-        #endif
-        //Get the process that has finished
-        process_t* p=getProcessByID(processID);
-        updatePCB(p,FINISHED); //Update the pcb (state & TAT & WTAT)
-        sch->totalWT+=p->WT; //Updating the total waiting time
-        sch->busyTime+=p->RT; //Updating the total running time
-        sch->totalWTAT+=p->WTAT; //Updating the total weighted turnaround time
-        sch->finishedProcessesNum++; //Increment the finished processes count
-        updateOutfile(p); //Update the output file 
-        void* apid = (void*)(intptr_t)processID;
-        freeSlot(sch->pcb);
-        sch->runningP=NULL; //Free the running process to choose the next one
+    process_t* p= sch->runningP; //Update the state of the process
+    p->TAT=getClk()-p->AT; //Set the turnaround time of the process
+    p->WTAT=(float)p->TAT/p->RT; //Set the weighted turnaround time of the process
+    p->WT=getClk()-(p->RT)-(p->AT); //Update the waiting time of the process
+    p->state=FINISHED; //Update the state
+    sch->totalWT+=p->WT; //Updating the total waiting time
+    sch->busyTime+=p->RT; //Updating the total running time
+    sch->totalWTAT+=p->WTAT; //Updating the total weighted turnaround time
+    sch->finishedPCount++; //Increment the finished processes count
+    updateOutfile(p); //Update the output file 
+    free(sch->PCB[p->ID].process);
+    sch->runningP=NULL; //Free the running process to choose the next one
+    printf("end finish process\n");
+    if(sch->finishedPCount==sch->pCount)
+    {
+        printf("FINISHED at timeClk =%d\n",getClk());
+        sleep(1);
+        finishScheduling(0);
     }
-    else{
-        printError("Something went wrong with the exit code of a process.");
-    }
-    //Reassign the SIGCHLD signal to this function as a handler
+    //Reset the SIGCHLD signal to this function as a handler
     signal(SIGUSR2,finishProcess);
 }
 
 void SRTNAlgo()
 {
-    #ifdef DEBUG
-    printf("SRTN Algorithm\n");
-    #endif
     int lastClk = getClk();
-
-    while (true)
+    while (sch->finishedPCount < sch->pCount)
     {
 
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
             continue;
         
-        #ifdef DEBUG
-        printf("new time %d\n" ,getClk());
-        #endif
 
         lastClk++;
         while (receivingFlag); //Wait to get all the processes arriving at this time stamp 
         receivingFlag = true; //Reset the flag to true to receive the new processes at the next time stamp
 
         process_t* shortest = getNextReady();
+
         if(!isReadyEmpty())
         {
-            printf("ready is not empty \n");
-            #ifdef DEBUG
-            #endif
+
             if(sch->runningP!=NULL && sch->runningP->state != FINISHED && shortest->RemT < sch->runningP->RemT)
             {
-                #ifdef DEBUG
-                printf("it's not the shortest\n");
-                #endif
                 stopProcess(sch->runningP);
-                sch->runningP = shortest;
-                removeFromReady();
                 continueProcess(sch->runningP);
+                removeFromReady();
             }
             else if(sch->runningP==NULL)
             {
-                #ifdef DEBUG
-                printf("No running processes\n");
-                #endif
-                sch->runningP = shortest;
                 continueProcess(shortest);
-                #ifdef DEBUG
-                printf("Let's remove from ready\n");
-                #endif
                 removeFromReady();
-                #ifdef DEBUG
-                printf("we have removed ready\n");
-                #endif
-                
             }
             else
             {
-                #ifdef DEBUG
-                printf("just update\n");
-                #endif
                 sch->runningP->RemT--; //Decrement the remaining time of the running process
             }
         }
         else
         {
-            printf("ready is empty\n");
-            #ifdef DEBUG
-            #endif
+
             if(sch->runningP!=NULL)
             {
-                #ifdef DEBUG
-                printf("just decrement\n");
-                #endif
                 sch->runningP->RemT--; //Decrement the remaining time of the running process
-
             }
         }
-        #ifdef DEBUG
-        printf("we finished a loop for a timeclk %d\n",getClk());
-        #endif
+
     }
 }
 
 void HPFAlgo()
 {
-    #ifdef DEBUG
-    printf("HPF Algorithm\n");
-    #endif
     int lastClk = getClk();
-    while (true)
+    while (sch->finishedPCount < sch->pCount)
     {
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
             continue;
-        
         while (receivingFlag); //Wait to get all the processes arriving at this time stamp 
         receivingFlag = true; //Reset the flag to true to receive the new processes at the next time stamp
 
+        printf("pCount= %d pFinished= %d\n",sch->finishedPCount , sch->pCount);   
         if (isReadyEmpty() && sch->runningP==NULL) //There is no ready processes to run, so no need to process anything
             continue;
 
-        process_t* shortest = getNextReady();
 
         if (sch->runningP==NULL) //There is no process running process, so run the next ready process if exists.
         {
-            if(!isReadyEmpty())
-            {
-            sch->runningP = shortest;
+            process_t* shortest = getNextReady();
             removeFromReady();
-            continueProcess(sch->runningP);
-            }
-            else
-            {
-                continue;
-            }
+            continueProcess(shortest);
         }
         else
         {
@@ -419,15 +308,14 @@ void HPFAlgo()
         }
         lastClk++;
     }
+    printf("FINISHED\n");
+    sleep(1);
 }
 
 void RRAlgo(int timeSlice)
 {
-    #ifdef DEBUG
-    printf("SRTN Algorithm\n");
-    #endif
     int lastClk = getClk();
-    while (true)
+    while (sch->finishedPCount < sch->pCount)
     {
         if (lastClk == getClk()) //It's the same timeclk, so no need to process anything
             continue;
@@ -444,9 +332,9 @@ void RRAlgo(int timeSlice)
         {
             if(!isReadyEmpty())
             {
-            sch->runningP = nextP;
-            removeFromReady();
-            continueProcess(sch->runningP);
+                sch->runningP = nextP;
+                removeFromReady();
+                continueProcess(sch->runningP);
             }
             else
             {
@@ -459,10 +347,10 @@ void RRAlgo(int timeSlice)
             bool finishedQuanta= (getClk()-(sch->runningP->lastRun))>timeSlice;
             if(!isReadyEmpty() && sch->runningP->state != FINISHED && finishedQuanta)
             {
-            stopProcess(sch->runningP);
-            sch->runningP = nextP;
-            removeFromReady();
-            continueProcess(sch->runningP);
+                stopProcess(sch->runningP);
+                sch->runningP = nextP;
+                removeFromReady();
+                continueProcess(sch->runningP);
             }
             else
             {            
@@ -476,44 +364,26 @@ void RRAlgo(int timeSlice)
 
 void insertIntoReady(process_t* p)
 {
-    (sch->algo==RR_t)?enqueue(sch->readyContainer,p):insert(sch->readyContainer,p);
+    if(sch->algo==RR_t)
+        enqueue(sch->readyContainer,p);
+    else 
+        insert(sch->readyContainer,p);
 }
 
 void removeFromReady()
 {
-    #ifdef DEBUG
-        printf("inside dremove from ready\n");
-    #endif
     if(sch->algo==RR_t)
     {
-        #ifdef DEBUG
-            printf("delete from RR\n");
-        #endif
         dequeue(sch->readyContainer);
-        #ifdef DEBUG
-            printf("deleted from RR\n");
-        #endif
     }
     else
     {
-        #ifdef DEBUG
-            printf("delete from heap\n");
-        #endif
         deleteMin(sch->readyContainer);
-        #ifdef DEBUG
-            printf("deleted from heap\n");
-        #endif
     }
-    #ifdef DEBUG
-    printf("we have removed\n");
-    #endif            
 }
 
 process_t* getNextReady()
 {
-    #ifdef DEBUG
-    printf("inside getNext = %d\n",sch->algo);
-    #endif
     if(sch->algo==RR_t)
         return front(sch->readyContainer);
     else
@@ -522,19 +392,10 @@ process_t* getNextReady()
 
 bool isReadyEmpty()
 {
-    #ifdef DEBUG
-    printf("inside isReady = %d\n",sch->algo);
-    #endif
-    bool is;
     if(sch->algo==RR_t)
-        is= isEmptyQueue(sch->readyContainer);
+        return isEmptyQueue(sch->readyContainer);
     else
-        is= isEmptyHeap(sch->readyContainer);
-    #ifdef DEBUG
-    printf("is is %d\n",is);
-    #endif
-    
-    return is;
+        return isEmptyHeap(sch->readyContainer);
 }
 
 void destroyReady()
@@ -545,9 +406,10 @@ void destroyReady()
         destroyHeap(sch->readyContainer);   
 }
 
-void clearResources(int signum)
+void finishScheduling(int signum)
 {
     destroyReady();
-    destroyList(sch->pcb);
+    float* schStatistics=calculateStatistics();
+    generatePrefFile(schStatistics);
     destroyClk(true);
 }

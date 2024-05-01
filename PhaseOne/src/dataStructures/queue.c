@@ -1,8 +1,14 @@
 #include "queue.h"
-
+node_t* createNode(void *data,node_t *next)
+{
+    node_t* node = (node_t*)malloc(sizeof(node_t));
+    node->data=data;
+    node->next=next;
+    return node;
+}
 // Function to initialize the queue
 queue_t *createQueue() {
-    queue_t  *queue = (queue_t *)malloc(sizeof(queue_t));
+    queue_t  *queue = (queue_t*)malloc(sizeof(queue_t));
     if (queue == NULL) {
         return NULL;
     }
@@ -12,7 +18,8 @@ queue_t *createQueue() {
 }
 
 // Function to check if the queue is empty
-int isEmptyQueue(queue_t  *queue) {
+int isEmptyQueue(queue_t  *queue) 
+{
     #ifdef DEBUG
     if(queue==NULL)
     {
@@ -36,16 +43,15 @@ void enqueue(queue_t  *queue, void *data) {
 }
 
 // Function to dequeue an element from the queue
-void* dequeue(queue_t  *queue) {
+void dequeue(queue_t  *queue) {
     if (isEmptyQueue(queue)) {
-        return (void*)NULL;
+        return;
     }
     node_t *temp = queue->front;
     void *data = temp->data;
     queue->front = queue->front->next;
-    free(temp);
     queue->size--;
-    return data;
+    return;
 }
 
 // Function to get the front element of the queue without removing it
@@ -67,13 +73,4 @@ void destroyQueue(queue_t *queue) {
         dequeue(queue);
     }
     free(queue);
-}
-
-void printQueue(queue_t* queue, void (*print)(void *))
-{
-  node_t *current = queue->front;
-    while (current != NULL) {
-        print(current->data);
-        current = current->next;
-    }
 }

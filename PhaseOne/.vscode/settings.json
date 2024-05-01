@@ -67,6 +67,8 @@
     "stdio.h": "c",
     "ui.h": "c",
     "stdbool.h": "c",
-    "txt": "c"
+    "txt": "c",
+    "stdlib.h": "c",
+    "signal.h": "c"
   }
 }

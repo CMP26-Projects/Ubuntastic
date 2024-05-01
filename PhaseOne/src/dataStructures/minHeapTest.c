@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "./src/dataStructures/minHeap.h"
-#include "./src/SystemComponents/processUnits.h"
+#include "minHeap.h"
+#include "../SystemComponents/processUnits.h"
 
 // Uncomment the following line to enable debugging
 // #define DEBUG

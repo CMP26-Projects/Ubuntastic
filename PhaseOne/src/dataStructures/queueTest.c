@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "./queue.h"
-#include "./src/dataStructures/queue.h"
-#include "./src/SystemComponents/processUnits.h"
+#include "../SystemComponents/processUnits.h"
 
 
 int main() {

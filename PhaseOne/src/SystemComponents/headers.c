@@ -1,5 +1,5 @@
 #include "headers.h"
-
+///Time Functions///
 clk_t getClk()
 {
     return *shmaddr;
@@ -18,6 +18,13 @@ void initClk()
     shmaddr = (int *)shmat(shmid, (void *)0, 0);
 }
 
+void sleepMilliseconds(long milliseconds) {
+    struct timespec ts;
+    ts.tv_sec = milliseconds / 1000;
+    ts.tv_nsec = (milliseconds % 1000) * 1000000;
+    nanosleep(&ts, NULL);
+}
+
 void destroyClk(bool terminateAll)
 {
     shmdt(shmaddr);
@@ -25,13 +32,6 @@ void destroyClk(bool terminateAll)
     {
         killpg(getpgrp(), SIGINT);
     }
-}
-
-void sleepMilliseconds(long milliseconds) {
-    struct timespec ts;
-    ts.tv_sec = milliseconds / 1000;
-    ts.tv_nsec = (milliseconds % 1000) * 1000000;
-    nanosleep(&ts, NULL);
 }
 
 //===============MessageQueue===============//
@@ -69,6 +69,7 @@ int creatShMemory()
     int shmid = shmget(key, 50, IPC_CREAT | 0666);
     if ((long)shmid == -1)
     {
+
         perror("Error in creating shm!");
         exit(-1);
     }

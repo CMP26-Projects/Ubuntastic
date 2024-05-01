@@ -1,4 +1,5 @@
-#include "headers.h"
+#include "UI.h"
+char* lineToPrint;
 
 int processID,runTime,remainingTime,startTime; 
 void stop(int);
@@ -6,6 +7,7 @@ void resume(int);
 
 int main(int agrc, char *argv[])
 {
+
     //Read the process data
     initClk();
     startTime = getClk();
@@ -15,9 +17,10 @@ int main(int agrc, char *argv[])
     //Set the signals' handlers 
     signal(SIGTSTP,stop);
     signal(SIGCONT,resume);
-
+    lineToPrint=(char*)malloc(LINE_SIZE*sizeof(char));
     #ifdef DEBUG
-    printf("The process started with pid= %d \n", processID);
+        sprintf(lineToPrint,"The process started with pid= %d \n", processID);
+        printLine(lineToPrint,GRN);
     #endif    
     clk_t lastClk=getClk();
     while (remainingTime>0)
@@ -27,15 +30,23 @@ int main(int agrc, char *argv[])
         lastClk++;
         remainingTime=runTime+startTime-getClk();
         #ifdef DEBUG
-        printf("Reminaing for process %d = %d \n", processID,remainingTime);
+            sprintf(lineToPrint,"Reminaing for process %d", processID);
+            printLine(lineToPrint,GRN);
+            sprintf(lineToPrint,"= %d ", remainingTime);
+            printLine(lineToPrint,GRN);
         #endif    
     }
-    #ifdef DEBUG
-    printf("The process %d has finished and i will notify scheduler with pid %d\n", processID,getppid());
-    #endif
     //Clear Resources
-    destroyClk(false);
+    // destroyClk(false);
     //Notify scheduler that the process has finished(it will send SIGCHLD to the scheduler)
+    #ifdef DEBUG
+        sprintf (lineToPrint,"The process %d has finished", processID);
+        printLine(lineToPrint,GRN);
+        sprintf (lineToPrint," at ttimeCLk %d\n", getClk());
+        printLine(lineToPrint,GRN);
+        sprintf (lineToPrint," and i will notify scheduler with pid %d\n", getppid());
+        printLine(lineToPrint,GRN);
+    #endif
 
     kill(getppid(),SIGUSR2);
     //Return the real process ID to remove its slot from the PCB
@@ -49,7 +60,10 @@ void stop(int signum)
     runTime=remainingTime;
     
     #ifdef DEBUG
-    printf("I'm process %d will stop and remaining %d \n",processID,remainingTime);
+        sprintf(lineToPrint,"I'm the process %d will stop", processID);
+        printLine(lineToPrint,GRN);
+        sprintf(lineToPrint,"at time %d\n",getClk());
+        printLine(lineToPrint,GRN);
     #endif    
     
     raise(SIGSTOP);
@@ -60,8 +74,12 @@ void stop(int signum)
 void resume(int signum)
 {
     #ifdef DEBUG
-    printf("I'm process %d will resume and remaining %d \n",processID,remainingTime);
-    #endif        
+        sprintf(lineToPrint,"I'm the process %d will resumed", processID);
+        printLine(lineToPrint,GRN);
+        sprintf(lineToPrint,"at time %d\n",getClk());
+        printLine(lineToPrint,GRN);
+    #endif    
+
     startTime=getClk();
     signal(SIGCONT,resume);
 }
