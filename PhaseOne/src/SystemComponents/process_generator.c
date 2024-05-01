@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     sprintf(lineToPrint,"The total number of processes is %d\n",totalProcesses);
     printLine(lineToPrint,GRN);
     
-    //Initiate and create clock process.    
+    //Initiate and  create clock process.    
     pid_t clk = fork();
     if (clk == -1)
     {

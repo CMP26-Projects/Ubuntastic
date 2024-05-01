@@ -1,0 +1,6 @@
+AT time 3 process 3 ⏳ started ⏳ total 1 remain 1 wait 0 
+AT time 4 process 3 ✅ finished ✅ total 1 remain 1 wait 0 TA 1 WTA 1.00
+AT time 4 process 2 ⏳ started ⏳ total 2 remain 2 wait 0 
+AT time 6 process 2 ✅ finished ✅ total 2 remain 1 wait 1 TA 3 WTA 1.50
+AT time 6 process 1 ⏳ started ⏳ total 3 remain 3 wait 0 
+AT time 9 process 1 ✅ finished ✅ total 3 remain 0 wait 3 TA 6 WTA 2.00

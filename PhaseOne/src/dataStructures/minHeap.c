@@ -1,24 +1,29 @@
 #include "minHeap.h"
 #include <stdlib.h>
 // Function to create a new heap
-minHeap_t *createHeap(int crit) {
+minHeap_t *createHeap(int crit)
+{
     minHeap_t *heap = (minHeap_t *)malloc(sizeof(minHeap_t));
-    if (heap == NULL) {
+    if (heap == NULL)
+    {
         return NULL;
     }
     heap->arr = (process_t **)malloc(100000 * sizeof(process_t *));
-    if (heap->arr == NULL) {
+    if (heap->arr == NULL)
+    {
         return NULL;
+    }
     heap->size = 0;
     heap->criteria = crit;
-    }
     return heap;
 }
 
-bool isEmptyHeap(minHeap_t* heap)
+bool isEmptyHeap(minHeap_t *heap)
 {
-    return (heap->size==0);
+    return (heap->size == 0);
 }
+
+//=========================================
 
 void swap(process_t **a, process_t **b)
 {
@@ -26,97 +31,107 @@ void swap(process_t **a, process_t **b)
     *a = *b;
     *b = temp;
 }
-
-int parent(int index) {
-    return (index - 1) / 2;
-}
-
-int leftChild(int index) {
-    return 2 * index + 1;
-}
-
-int rightChild(int index) {
-    return 2 * index + 2;
-}
-
-int comparePriority(void* A ,void* B)
+int parent(int i, int size)
 {
-    process_t*a=(process_t*)A;
-    process_t*b=(process_t*)B;
-    if(a!=NULL&&b!=NULL)
-        return a->priority - b->priority;
-    else 
-        return 0;
+    return (i + 1) / 2 > 0 ? (i + 1) / 2 : -1;
 }
 
-int compare(minHeap_t* heap,process_t* a, process_t* b)
+int leftChild(int i, int size)
 {
-    if(heap->criteria==HPF_t)
-        if(a!=NULL & b!=NULL)
-            return a->priority - b->priority;
-        else
-            return 0;
-    else 
-        if(a!=NULL & b!=NULL)
-            return a->RemT - b->RemT;
-        else
-            return 0;
+    return (i * 2 + 1) < size ? (i * 2 + 1) : -1;
 }
 
-void insert(minHeap_t *heap, process_t *data) {
-    int index = heap->size;
-    heap->arr[index] = data;
-    heap->size++;
+int rightChild(int i, int size)
+{
+    return (i * 2 + 2) < size ? (i * 2 + 2) : -1;
+}
 
-    // Bubble up the newly inserted element
-    while (index > 0 && compare(heap,heap->arr[index], heap->arr[parent(index)]) < 0){
-        swap(&heap->arr[index], &heap->arr[parent(index)]);
-        index = parent(index);
+void heapify(process_t **arr, int i, int size)
+{
+    int l, r, min;
+    l = leftChild(i, size);
+    r = rightChild(i, size);
+
+    if (l != -1 && arr[i]->priority > arr[l]->priority)
+        min = l;
+    else
+        min = i;
+    if (r != -1 && arr[min]->priority > arr[r]->priority)
+    {
+        min = r;
+    }
+
+    if (min != i)
+    {
+        swap(&arr[i], &arr[min]);
+        heapify(arr, min, size);
     }
 }
 
-void heapify(minHeap_t *heap, int index) {    
-    int smallest = index;
-    
-    int left = leftChild(index);
-    int right = rightChild(index);
+void Build_heap(process_t **arr, int size)
+{
 
-    if (left < heap->size && compare(heap,heap->arr[left], heap->arr[smallest]))
-        smallest = left;
-    if (right < heap->size && compare(heap,heap->arr[right], heap->arr[smallest]) < 0)
-        smallest = right;
-
-    
-    if (smallest != index) {
-        swap(&heap->arr[index], &heap->arr[smallest]);
-        heapify(heap, smallest);
+    for (int i = size + 1 / 2; i >= 0; i--)
+    {
+        heapify(arr, i, size);
     }
 }
 
-process_t* getMin(minHeap_t *heap) {
+void HeapSort(process_t **arr, int size)
+{
+    int n = size;
+
+    Build_heap(arr, size);
+    for (int i = n - 1; i >= 1; i--)
+    {
+        swap(&arr[i], &arr[0]);
+        n--;
+        heapify(arr, 0, n);
+    }
+}
+process_t *getMin(minHeap_t *heap)
+{
     if (heap->size == 0)
         return NULL;
     else
     {
         return heap->arr[0];
-    } 
-}
-
-void deleteMin(minHeap_t* heap)
-{
-     if (heap->size == 0) {
-
-        return;
     }
-
-    heap->arr[0] = heap->arr[heap->size - 1];
-    heap->size--;
-    heapify(heap, 0);
-    return;
 }
-
-void destroyHeap(minHeap_t* heap)
+void destroyHeap(minHeap_t *heap)
 {
-    while(!isEmptyHeap(heap))
+    while (!isEmptyHeap(heap))
         deleteMin(heap);
+}
+void deleteRoot(minHeap_t *heap)
+{
+
+    int n = heap->size;
+    // Get the last element
+    process_t *lastElement = heap->arr[n - 1];
+
+    // Replace root with last element
+    heap->arr[0] = lastElement;
+
+    // Decrease size of heap by 1
+    // // free(lastElement);
+    /// lastElement = NULL;
+
+    n = n - 1;
+    heap->size = n;
+
+    // heapify the root node
+    heapify(heap->arr, 0, n);
+}
+void deleteMin(minHeap_t *heap)
+{
+    deleteRoot(heap);
+}
+void insert(minHeap_t *heap, process_t *data)
+{
+    int index = heap->size;
+    heap->arr[index] = data;
+    heap->size++;
+    int i = index;
+    Build_heap(heap->arr, heap->size);
 }

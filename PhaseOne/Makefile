@@ -29,7 +29,7 @@ build: clean
 	
 	gcc test_generator.c -o test_generator.out
 
-run:
+run: build
 	@./process_generator.out ./processes.txt
 
 clean:
