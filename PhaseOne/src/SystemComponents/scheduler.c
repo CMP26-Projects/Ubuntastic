@@ -137,6 +137,7 @@ void stopProcess(process_t *p)
     insertIntoReady(p);                  // Insert the process into the ready container
     updateOutfile(p);                    // Update the log file
     kill(sch->PCB[p->ID]->PID, SIGTSTP); // Send SIGSTOP to stop the process from execution
+    printf("i am now stoped ================\n");
 }
 
 void continueProcess(process_t *p)
@@ -197,7 +198,8 @@ void finishProcess(int signum)
     sch->busyTime += p->RT;               // Updating the total running time
     sch->totalWTAT += p->WTAT;            // Updating the total weighted turnaround time
     sch->finishedPCount++;                // Increment the finished processes count
-
+    int state;
+    int pid = wait(state);
     updateOutfile(p); // Update the output file
     free(sch->PCB[p->ID]);
     sch->runningP = NULL; // Free the running process to choose the next one
@@ -226,8 +228,10 @@ void SRTNAlgo()
         {
             if (sch->runningP != NULL && sch->runningP->state != FINISHED && shortest->RemT < sch->runningP->RemT)
             {
+
                 stopProcess(sch->runningP);
-                continueProcess(sch->runningP);
+                sch->runningP->RemT--;
+                continueProcess(shortest);
                 removeFromReady();
             }
             else if (sch->runningP == NULL)
