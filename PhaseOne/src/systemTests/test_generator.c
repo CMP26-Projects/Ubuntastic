@@ -15,7 +15,7 @@ int main(int argc, char * argv[])
 {
     FILE * pFile;
     char filePath[25];
-    sprintf(filePath, "systemTests/test-%s.txt",argv[1]);
+    sprintf(filePath, "test-%s.txt",argv[1]);
     pFile = fopen(filePath, "w");
     struct processData pData;
     fprintf(pFile, "#id\tarrival\truntime\tpriority\n");

@@ -25,7 +25,7 @@ build: clean
 
 	gcc process.o UI.o headers.o  queue.o minHeap.o -o process.out
 	
-	gcc systemTests/test_generator.c -o systemTests/test_generator.out
+	gcc systemTests/test_generator.c -o systemTests/test.out
 
 run: build
 	@./gen.out ./systemTests/test-5.txt

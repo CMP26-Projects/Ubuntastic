@@ -24,7 +24,6 @@ void enqueue(queue_t *queue, void *data);
 void dequeue(queue_t *queue);
 
 void *front(queue_t *queue);
-
 int getSize(queue_t *queue);
 
 void destroyQueue(queue_t *queue);

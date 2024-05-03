@@ -26,6 +26,7 @@ int main(int argc, char *argv[])
     pQueue=createQueue();
     //Read the input files.
     pQueue = readFile(argv[1], pQueue);
+    printf("the gen started with algo=%d and q= %d\n",schedAlgo,timeSlice);
     //Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     // getUserInput(&schedAlgo, &timeSlice);
     

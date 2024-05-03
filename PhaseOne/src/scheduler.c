@@ -133,11 +133,18 @@ void startProcess(process_t *p)
 
 void stopProcess(process_t *p)
 {
-    p->state = STOPPED;
-    insertIntoReady(p);                  // Insert the process into the ready container
-    updateOutfile(p);                    // Update the log file
-    kill(sch->PCB[p->ID]->PID, SIGTSTP); // Send SIGSTOP to stop the process from execution
-    printf("i am now stoped ================\n");
+    if (p->RemT > 0)
+    {
+        p->state = STOPPED;
+        insertIntoReady(p);                  // Insert the process into the ready container
+        updateOutfile(p);                    // Update the log file
+        kill(sch->PCB[p->ID]->PID, SIGTSTP); // Send SIGSTOP to stop the process from execution
+        printf("i am now stoped ================\n");
+    }
+    else
+    {
+        sleepMilliseconds(100);
+    }
 }
 
 void continueProcess(process_t *p)
@@ -153,7 +160,7 @@ void continueProcess(process_t *p)
         p->lastRun = getClk();                 // Set the last time this process has run
         p->state = RESUMED;
         kill(sch->PCB[p->ID]->PID, SIGCONT); // Send SIGCONT to resume the process
-        removeFromReady();                   // Remove the process from the ready container
+        // removeFromReady();                   // Remove the process from the ready container
         updateOutfile(p);
     }
 }
@@ -164,7 +171,9 @@ float *calculateStatistics()
     schStatistics[0] = (sch->busyTime * 100) / (float)getClk();                // CPU_Utiliziation
     schStatistics[1] = sch->totalWTAT / sch->pCount;                           // Avg_WTA
     schStatistics[2] = (float)sch->totalWT / sch->pCount;                      // Avg_Waiting
-    schStatistics[3] = (float)sqrt(sch->totalWTAT / (float)(sch->pCount - 1)); // StdWTAT
+    schStatistics[3] =0;
+    if(sch->pCount>1)
+    schStatistics[3]=(float)sqrt(sch->totalWTAT / (float)(sch->pCount - 1)); // StdWTAT
     return schStatistics;
 }
 
@@ -217,7 +226,12 @@ void SRTNAlgo()
     {
         if (lastClk == getClk()) // It's the same timeclk, so no need to process anything
             continue;
-        printHeap(sch->readyContainer, GRN);
+
+        sleepMilliseconds(180);
+        if (sch->runningP != NULL)
+            sch->runningP->RemT--;
+
+        printHeap(sch->readyContainer, YEL);
         lastClk++;
         while (receivingFlag)
             ;                 // Wait to get all the processes arriving at this time stamp
@@ -230,7 +244,6 @@ void SRTNAlgo()
             {
 
                 stopProcess(sch->runningP);
-                sch->runningP->RemT--;
                 continueProcess(shortest);
                 removeFromReady();
             }
@@ -239,13 +252,7 @@ void SRTNAlgo()
                 continueProcess(shortest);
                 removeFromReady();
             }
-            else
-                sch->runningP->RemT--; // Decrement the remaining time of the running process
-        }
-        else
-        {
-            if (sch->runningP != NULL)
-                sch->runningP->RemT--; // Decrement the remaining time of the running process
+            // Decrement the remaining time of the running process
         }
     }
 }
@@ -257,6 +264,9 @@ void HPFAlgo()
     {
         if (lastClk == getClk()) // It's the same timeclk, so no need to process anything
             continue;
+        sleepMilliseconds(40);
+        if (sch->runningP != NULL)
+            sch->runningP->RemT--;
         printHeap(sch->readyContainer, YEL);
 
         while (receivingFlag)
@@ -272,22 +282,28 @@ void HPFAlgo()
             removeFromReady();
             continueProcess(shortest);
         }
-        else
-            sch->runningP->RemT--; // Decrement the remaining time of the running process
+        // Decrement the remaining time of the running process
         lastClk++;
-        printHeap(sch->readyContainer, RED);
+        printHeap(sch->readyContainer, YEL);
     }
 }
 
 void RRAlgo(int timeSlice)
 {
+    int countRemainTime = 0;
     int lastClk = getClk();
     while (true)
     {
         if (lastClk == getClk()) // It's the same timeclk, so no need to process anything
             continue;
+        sleepMilliseconds(150);
+        if (sch->runningP != NULL)
+        {
+            sch->runningP->RemT--;
+            countRemainTime++;
+        }
 
-        printQueue(sch->readyContainer, RED);
+        printQueue(sch->readyContainer, YEL);
         while (receivingFlag)
             ;                 // Wait to get all the processes arriving at this time stamp
         receivingFlag = true; // Reset the flag to true to receive the new processes at the next time stamp
@@ -297,27 +313,25 @@ void RRAlgo(int timeSlice)
         {
             if (sch->runningP != NULL)
             {
-                bool finishedQuanta = (getClk() - (sch->runningP->lastRun)) > timeSlice;
-                if (finishedQuanta)
+
+                if (countRemainTime == timeSlice || sch->runningP->RemT == 0)
                 {
+                    countRemainTime = 0;
                     stopProcess(sch->runningP);
                     removeFromReady();
                     continueProcess(nextP);
                 }
-                else
-                    sch->runningP->RemT--; // Decrement the remaining time of the running process
+                // Decrement the remaining time of the running process
             }
             else
             {
+                countRemainTime = 0;
                 removeFromReady();
                 continueProcess(nextP);
             }
         }
-        else
-        {
-            if (sch->runningP != NULL)
-                sch->runningP->RemT--; // Decrement the remaining time of the running process
-        }
+        // / Decrement the remaining time of the running process
+
         lastClk++;
     }
 }
@@ -371,6 +385,7 @@ void finishScheduling(int signum)
     destroyReady();
     float *schStatistics = calculateStatistics();
     generatePrefFile(schStatistics);
+    printf("FINISHED\n");
     destroyClk(false);
     kill(getppid(),SIGUSR2);
     exit(0);

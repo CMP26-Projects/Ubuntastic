@@ -1,4 +1,5 @@
 #include "queue.h"
+#include "../headers.h"
 node_t *createNode(void *data, node_t *next)
 {
     node_t *node = (node_t *)malloc(sizeof(node_t));
@@ -29,6 +30,7 @@ int isEmptyQueue(queue_t *queue)
         return 1;
     }
 #endif
+
     return queue->front == NULL;
 }
 
@@ -59,6 +61,8 @@ void dequeue(queue_t *queue)
     void *data = temp->data;
     queue->front = queue->front->next;
     queue->size--;
+    free(temp);
+
     return;
 }
 
@@ -69,6 +73,8 @@ void *front(queue_t *queue)
     {
         return NULL;
     }
+    if (queue->front == NULL)
+        return NULL;
     return queue->front->data;
 }
 

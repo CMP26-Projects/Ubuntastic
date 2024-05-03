@@ -107,7 +107,7 @@ void printError(char errorMsg[])
 
 void insertIntoLog(state_t state, float *pInfo)
 {
-    FILE *file = fopen("outputFiles/scheduler.log", "a");
+    FILE *file = fopen("./outputFiles/scheduler.log", "a");
     if (!file)
     {
         printf("Error in opening the file.. ");
@@ -145,7 +145,7 @@ void insertIntoLog(state_t state, float *pInfo)
 
 void generatePrefFile(float *statistics)
 {
-    FILE *file = fopen("outputFiles/scheduler.perf", "w");
+    FILE *file = fopen("./outputFiles/scheduler.perf", "w");
     if (!file)
     {
         printf("can't open the file\n");
@@ -204,7 +204,7 @@ void printProcess(void *data, char *clr)
 
 void printQueue(queue_t *queue, char *clr)
 {
-    if (!isEmptyQueue(queue))
+    if (isEmptyQueue(queue))
     {
         printLine("The Queue is Empty\n", RED);
         return;
@@ -235,6 +235,7 @@ void printHeap(minHeap_t *heap, char *clr)
     printf("The heap size is %d and has:\n", heap->size);
     for (int i = 0; i < heap->size; i++)
     {
+        printf("here is am");
         printProcess((void *)heap->arr[i], clr);
     }
 }

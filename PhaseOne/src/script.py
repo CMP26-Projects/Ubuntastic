@@ -1,44 +1,16 @@
-import os
-import subprocess
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
+import subprocess
+import os
 import matplotlib.pyplot as plt
+from PIL import ImageGrab
 
-# Function to handle file selection
 def select_file():
     file_path = filedialog.askopenfilename()
     seed_input.delete(0, tk.END)
     seed_input.insert(0, file_path)
 
-# Function to handle generating seed
-def generate_seed():
-    seed_input.delete(0, tk.END)
-    # Get the current working directory
-    current_dir = os.getcwd()
-    # Construct the path to process_generator.out based on the current directory
-    process_generator_path = os.path.join(current_dir, 'systemTests/test_generator.out')
-    
-    # Run process_generator.out with specified arguments
-    command = [process_generator_path, processes_num.get()]
-    seed_input.insert(0, f'{current_dir}/systemTests/test-{processes_num.get()}.txt')
-    processes_div.grid_remove()
-
-    try:
-        subprocess.run(command, check=True)
-    except subprocess.CalledProcessError as e:
-        messagebox.showerror("Error", f"Failed to run process_generator.out: {e}")
-        return
-
-# Function to handle starting simulation
 def start_simulation():
-    command = ['make']
-    
-    try:
-        subprocess.run(command, check=True)
-    except subprocess.CalledProcessError as e:
-        messagebox.showerror("Error", f"Failed to run process_generator.out: {e}")
-        return
-    
     seed = seed_input.get()
     sched_algo = scheduler_algo.get()
     time_slice_val = time_slice.get()
@@ -60,28 +32,26 @@ def start_simulation():
     else:
         sched_algo="2"
 
-    processes_div.grid_remove()
     start_btn.grid_remove()
-    
     scheduler_status.grid()
     
-    # Get the current working directory
+    # Run the process generator
+    command = ['make']
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
+        messagebox.showerror("Error", f"Failed to run process_generator.out: {e}")
+        return
+    
+    # Run the process generator with specified arguments
     current_dir = os.getcwd()
-    # Construct the path to process_generator.out based on the current directory
     process_generator_path = os.path.join(current_dir, 'gen.out')
-    
-    # Run process_generator.out with specified arguments
-    command = [process_generator_path, seed, sched_algo]
-    if sched_algo == 'RR':
-        command.append(time_slice_val)
-    
+    command = [process_generator_path, seed, sched_algo, time_slice_val]
     try:
         subprocess.run(command, check=True)
         
-        # Process the .perf and .log files
-        perf_file_path = 'outputFiles/scheduler.perf'
-        log_file_path = 'outputFiles/scheduler.log'
-        
+        # Process the .log file
+        perf_file_path = os.path.join(current_dir, 'outputFiles/scheduler.perf')
         with open(perf_file_path, 'r') as perf_file:
             perf_data = perf_file.readlines()
 
@@ -131,53 +101,105 @@ def start_simulation():
         plt.tight_layout()
         plt.savefig('outputFiles/perf_data_visualization.png')
         plt.show()
-        # Read and process the .log file
-        with open(log_file_path, 'r') as log_file:
-            log_data = log_file.readlines()
-
-        # Create a visual representation of the program lifecycle
-        # Assuming log_data contains program lifecycle events
-        process_lifecycle = []
-        current_process = None
-
-        for line in log_data:
-            if 'started' in line:
-                current_process = line.split()[3]
-                process_lifecycle.append((current_process, 'started'))
-            elif 'finished' in line:
-                process_lifecycle.append((current_process, 'finished'))
-                current_process = None
-            elif 'stopped' in line:
-                process_lifecycle.append((current_process, 'stopped'))
-                current_process = None
-            else:
-                process_lifecycle.append((current_process, 'resumed'))
-
-        # Visualize program lifecycle
+        
+        
+        log_file_path = os.path.join(current_dir, 'outputFiles/scheduler.log')
+        
+        # Extract data from the .log file
+        process_lifecycle = parse_log_file(log_file_path)
+        
+        # Create a table window
+        table_window = tk.Toplevel()
+        table_window.title("Process Timeline")
+        
+        # Create a Treeview widget (table/grid)
+        tree = ttk.Treeview(table_window)
+        tree['show'] = 'headings'
+        
+        # Define columns
+        tree["columns"] = ("Time", "Process ID", "Process State")
+        tree.column("Time", anchor='center', width=100)
+        tree.column("Process ID", anchor='center', width=100)
+        tree.column("Process State", anchor='center', width=150)
+        
+        # Define headings
+        tree.heading("Time", text="Time")
+        tree.heading("Process ID", text="Process ID")
+        tree.heading("Process State", text="Process State")
+        
+        # Insert data into the table/grid
+        for idx, (time, process_id, state) in enumerate(process_lifecycle):
+            color = 'white'  # Default color
+            
+            # Determine color based on state
+            if state == 'started' or state == 'resumed':
+                color = 'green'
+            elif state == 'stopped':
+                color = 'red'
+            elif state == 'finished':
+                color='blue'
+                
+            # Insert data row by row
+            tree.insert("", idx, values=(time, process_id, state), tags=(f'{idx}',))
+            
+            # Set color for each cell
+            tree.tag_configure(f'{idx}', background=color)
+        
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(table_window, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        
+        tree.pack(expand=True, fill="both")
+        table_window.update()  # Ensure all widgets are updated
+        # Plot the data
         plt.figure(figsize=(10, 6))
-        for idx, (process, event) in enumerate(process_lifecycle):
-            if event == 'started':
-                plt.scatter(idx, process, color='blue', label='started')
-            elif event == 'finished':
-                plt.scatter(idx, process, color='orange', label='finished')
-            elif event == 'stopped':
-                plt.scatter(idx, process, color='red', label='stopped')
-            else :
-                plt.scatter(idx, process, color='green', label='resumed')
-        
-        plt.yticks(range(1, len(process_lifecycle) + 1))
-        plt.xlabel('Time')
-        plt.ylabel('Process')
-        plt.title('Program Lifecycle')
-        plt.grid(True)
-        plt.legend()
-        plt.savefig('outputFiles/program_lifecycle.png')
-        plt.show()
-        
 
+        # Extract and format data for plotting
+        times = [int(entry[0]) for entry in process_lifecycle]
+        process_ids = [int(entry[1]) for entry in process_lifecycle]
+        
+        # Plotting
+        plt.plot(times, process_ids, marker='o', linestyle='-')
+        plt.title('Process Lifecycle')
+        plt.xlabel('Time')
+        plt.ylabel('Process ID')
+        plt.grid(True)
+
+        # Save the plot to an image file
+        plt.savefig('outputFiles/process_lifecycle_plot.png')
+        
+        # Show the plot
+        plt.show()
+                    # Insert data into the table/grid
+        for idx, (time, process_id, state) in enumerate(process_lifecycle):
+            tree.insert("", idx, values=(time, process_id, state))
+
+        tree.pack(expand=True, fill="both")
+
+        # Save the table as an image
+        table_window.update()
+        x = table_window.winfo_rootx()
+        y = table_window.winfo_rooty()
+        width = table_window.winfo_width()
+        height = table_window.winfo_height()
+        screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
+        screenshot.save("log_table_image.png")
     except subprocess.CalledProcessError as e:
         messagebox.showerror("Error", f"Failed to run gen.out: {e}")
         return
+
+def parse_log_file(log_file_path):
+    process_lifecycle = []
+    with open(log_file_path, 'r') as log_file:
+        log_data = log_file.readlines()
+    for line in log_data:
+        parts = line.split()
+        time = parts[2]
+        process_id = parts[4]
+        state = parts[6]
+        process_lifecycle.append((time, process_id, state))
+    return process_lifecycle
 
 # Create GUI
 root = tk.Tk()
@@ -202,21 +224,6 @@ seed_input.grid(row=0, column=1, pady=5)
 
 select_path_btn = tk.Button(input_fields_container, text="Select Existing Seed", command=select_file)
 select_path_btn.grid(row=0, column=2)
-
-make_path_btn = tk.Button(input_fields_container, text="Make New Seed", command=generate_seed)
-make_path_btn.grid(row=0, column=3)
-
-processes_div = tk.Frame(input_fields_container)
-processes_div.grid(row=1, column=0, columnspan=4, pady=5)
-
-processes_num_label = tk.Label(processes_div, text="Number of Processes:")
-processes_num_label.grid(row=0, column=0, sticky='w')
-
-processes_num = tk.Entry(processes_div)
-processes_num.grid(row=0, column=1)
-
-generate_seed_btn = tk.Button(processes_div, text="Generate Seed", command=generate_seed)
-generate_seed_btn.grid(row=0, column=2)
 
 scheduler_algo_label = tk.Label(input_fields_container, text="Algorithm:")
 scheduler_algo_label.grid(row=2, column=0, sticky='w')
