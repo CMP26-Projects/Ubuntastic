@@ -371,5 +371,7 @@ void finishScheduling(int signum)
     destroyReady();
     float *schStatistics = calculateStatistics();
     generatePrefFile(schStatistics);
-    destroyClk(true);
+    destroyClk(false);
+    kill(getppid(),SIGUSR2);
+    exit(0);
 }

@@ -5,7 +5,7 @@ typedef struct
     long mtype;
     int data[4];
 }processMsg;
-
+pid_t clk;
 int msgid;
 queue_t* pQueue;
 void clearResources(int);
@@ -13,6 +13,7 @@ processMsg createProcessMessage(process_t*); //Create a message of the process d
 
 int main(int argc, char *argv[])
 {
+    system("clear");
     char* lineToPrint=(char*)malloc(LINE_SIZE*sizeof(char));
     int timeSlice=-1;
     int schedAlgo=atoi(argv[2]);
@@ -20,7 +21,7 @@ int main(int argc, char *argv[])
         timeSlice=atoi(argv[3]);
 
     msgid = createMessageQueue();
-    signal(SIGINT, clearResources); //If it gets interrupted, clear the resources 
+    signal(SIGUSR2, clearResources); //If it gets interrupted, clear the resources 
 
     pQueue=createQueue();
     //Read the input files.
@@ -33,7 +34,7 @@ int main(int argc, char *argv[])
     printLine(lineToPrint,GRN);
     
     //Initiate and  create clock process.    
-    pid_t clk = fork();
+    clk = fork();
     if (clk == -1)
     {
         printError("Error in Forking the Clock\n");
@@ -146,5 +147,7 @@ void clearResources(int signum)
     //Delete the processes shared memory
     msgctl(msgid, IPC_RMID, (struct msqid_ds *)0);
     destroyQueue(pQueue);
+    destroyClk(false);
+    kill(clk,SIGINT);
     exit(0);
 }
