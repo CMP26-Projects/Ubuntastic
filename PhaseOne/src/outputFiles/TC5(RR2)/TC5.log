@@ -1,0 +1,64 @@
+AT time 2 process 1 ⏳ started ⏳ total 12 remain 12 wait 0 
+AT time 4 process 1 ⛔️ stopped ⛔️ total 12 remain 10 wait 0 
+AT time 4 process 2 ⏳ started ⏳ total 8 remain 8 wait 0 
+AT time 6 process 2 ⛔️ stopped ⛔️ total 8 remain 6 wait 0 
+AT time 6 process 3 ⏳ started ⏳ total 9 remain 9 wait 0 
+AT time 8 process 3 ⛔️ stopped ⛔️ total 9 remain 7 wait 0 
+AT time 8 process 4 ⏳ started ⏳ total 5 remain 5 wait 0 
+AT time 10 process 4 ⛔️ stopped ⛔️ total 5 remain 3 wait 0 
+AT time 10 process 5 ⏳ started ⏳ total 8 remain 8 wait 0 
+AT time 12 process 5 ⛔️ stopped ⛔️ total 8 remain 6 wait 0 
+AT time 12 process 6 ⏳ started ⏳ total 10 remain 10 wait 0 
+AT time 14 process 6 ⛔️ stopped ⛔️ total 10 remain 8 wait 0 
+AT time 14 process 7 ⏳ started ⏳ total 6 remain 6 wait 0 
+AT time 16 process 7 ⛔️ stopped ⛔️ total 6 remain 4 wait 0 
+AT time 16 process 8 ⏳ started ⏳ total 3 remain 3 wait 0 
+AT time 18 process 8 ⛔️ stopped ⛔️ total 3 remain 1 wait 0 
+AT time 18 process 1 ▶️ resumed ▶️ total 12 remain 10 wait 15 
+AT time 20 process 1 ⛔️ stopped ⛔️ total 12 remain 8 wait 15 
+AT time 20 process 2 ▶️ resumed ▶️ total 8 remain 6 wait 17 
+AT time 22 process 2 ⛔️ stopped ⛔️ total 8 remain 4 wait 17 
+AT time 22 process 3 ▶️ resumed ▶️ total 9 remain 7 wait 19 
+AT time 24 process 3 ⛔️ stopped ⛔️ total 9 remain 5 wait 19 
+AT time 24 process 4 ▶️ resumed ▶️ total 5 remain 3 wait 21 
+AT time 26 process 4 ⛔️ stopped ⛔️ total 5 remain 1 wait 21 
+AT time 26 process 5 ▶️ resumed ▶️ total 8 remain 6 wait 23 
+AT time 28 process 5 ⛔️ stopped ⛔️ total 8 remain 4 wait 23 
+AT time 28 process 6 ▶️ resumed ▶️ total 10 remain 8 wait 25 
+AT time 30 process 6 ⛔️ stopped ⛔️ total 10 remain 6 wait 25 
+AT time 30 process 7 ▶️ resumed ▶️ total 6 remain 4 wait 27 
+AT time 32 process 7 ⛔️ stopped ⛔️ total 6 remain 2 wait 27 
+AT time 32 process 8 ▶️ resumed ▶️ total 3 remain 1 wait 29 
+AT time 33 process 8 ✅ finished ✅ total 3 remain 0 wait 29 TA 32 WTA 10.67
+AT time 33 process 1 ▶️ resumed ▶️ total 12 remain 8 wait 28 
+AT time 35 process 1 ⛔️ stopped ⛔️ total 12 remain 6 wait 28 
+AT time 35 process 2 ▶️ resumed ▶️ total 8 remain 4 wait 30 
+AT time 37 process 2 ⛔️ stopped ⛔️ total 8 remain 2 wait 30 
+AT time 37 process 3 ▶️ resumed ▶️ total 9 remain 5 wait 32 
+AT time 39 process 3 ⛔️ stopped ⛔️ total 9 remain 3 wait 32 
+AT time 39 process 4 ▶️ resumed ▶️ total 5 remain 1 wait 34 
+AT time 40 process 4 ✅ finished ✅ total 5 remain 0 wait 34 TA 39 WTA 7.80
+AT time 40 process 5 ▶️ resumed ▶️ total 8 remain 4 wait 35 
+AT time 42 process 5 ⛔️ stopped ⛔️ total 8 remain 2 wait 35 
+AT time 42 process 6 ▶️ resumed ▶️ total 10 remain 6 wait 37 
+AT time 44 process 6 ⛔️ stopped ⛔️ total 10 remain 4 wait 37 
+AT time 44 process 7 ▶️ resumed ▶️ total 6 remain 2 wait 39 
+AT time 46 process 7 ✅ finished ✅ total 6 remain 0 wait 39 TA 45 WTA 7.50
+AT time 46 process 1 ▶️ resumed ▶️ total 12 remain 6 wait 39 
+AT time 48 process 1 ⛔️ stopped ⛔️ total 12 remain 4 wait 39 
+AT time 48 process 2 ▶️ resumed ▶️ total 8 remain 2 wait 41 
+AT time 50 process 2 ✅ finished ✅ total 8 remain 0 wait 41 TA 49 WTA 6.12
+AT time 50 process 3 ▶️ resumed ▶️ total 9 remain 3 wait 43 
+AT time 52 process 3 ⛔️ stopped ⛔️ total 9 remain 1 wait 43 
+AT time 52 process 5 ▶️ resumed ▶️ total 8 remain 2 wait 45 
+AT time 54 process 5 ✅ finished ✅ total 8 remain 0 wait 45 TA 53 WTA 6.62
+AT time 54 process 6 ▶️ resumed ▶️ total 10 remain 4 wait 47 
+AT time 56 process 6 ⛔️ stopped ⛔️ total 10 remain 2 wait 47 
+AT time 56 process 1 ▶️ resumed ▶️ total 12 remain 4 wait 47 
+AT time 58 process 1 ⛔️ stopped ⛔️ total 12 remain 2 wait 47 
+AT time 58 process 3 ▶️ resumed ▶️ total 9 remain 1 wait 49 
+AT time 59 process 3 ✅ finished ✅ total 9 remain 0 wait 49 TA 58 WTA 6.44
+AT time 59 process 6 ▶️ resumed ▶️ total 10 remain 2 wait 50 
+AT time 61 process 6 ✅ finished ✅ total 10 remain 0 wait 50 TA 60 WTA 6.00
+AT time 61 process 1 ▶️ resumed ▶️ total 12 remain 2 wait 50 
+AT time 63 process 1 ✅ finished ✅ total 12 remain 0 wait 50 TA 62 WTA 5.17
