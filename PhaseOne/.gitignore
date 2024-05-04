@@ -2,9 +2,13 @@
 
 # dependencies
 /node_modules
-/.vscode
-.out*
-.o* 
+
+PhaseOne/.vscode
+PhaseOne/src/.out*
+PhaseOne/src/.o* 
+PhaseOne/src/systemTests/.o* 
+PhaseOne/src/systemTests/.out* 
+PhaseOne/src/systemTests/.txt* 
 # testing
 
 # production
