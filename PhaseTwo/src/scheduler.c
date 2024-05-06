@@ -1,7 +1,9 @@
 #include "scheduler.h"
+
 int msgid;
 bool receivingFlag = true;
 char lineToPrint[1000];
+
 int main(int argc, char *argv[])
 {
     // Set the signals handlers
@@ -34,17 +36,28 @@ int main(int argc, char *argv[])
 scheduler_t *createScheduler(int argc, char *args[])
 {
     scheduler_t *sc = (scheduler_t *)malloc(sizeof(scheduler_t));
+
+    // Validating the number of arguments been sent
+    if (argc != 2)
+    {
+        printError("Invalid number of arguments");
+        exit(-1);
+    }
+
     // Initalize the scheduler data members
+    sc->memory = initializeMemory();
     sc->pCount = atoi(args[1]);
     sc->algo = atoi(args[2]);
     sc->receivedPCount = 0;
     sc->finishedPCount = 0;
     sc->runningP = NULL;
     sc->lastRecieved = NULL;
+    sc->busyTime = 0;
     sc->totalWT = 0;
     sc->totalWTAT = 0.0;
-    sc->busyTime = 0;
     sc->PCB = (process_t **)malloc((sc->pCount + 1) * sizeof(process_t *));
+
+    sc->waitingContainer = createHeap(MEM_t);
     switch (sc->algo)
     {
     case RR_t:
@@ -73,19 +86,24 @@ void receiveProcesses(int signum)
     {
         // Receive the message from the message queue
         int msgReceiving = msgrcv(msgid, &msg, sizeof(msg.data), 12, IPC_NOWAIT);
+
         // Check this process is a new one
         if (msgReceiving == -1)
         {
             break;
         }
+
         // Create a process of the recieved data
         process_t *p = createProcess(msg.data);
+        p->state = WAITING;
         // Set this process as the last received one
         sprintf(lineToPrint, "Scheduler received process %d at timeClk%d\n", p->ID, getClk());
         printLine(lineToPrint, GRN);
         printProcess(p, NRM);
-        // Add the new process to the scheduler container  (MinHeap|Queue)
+
+        // Add the new process to the scheduler's ready container
         insertIntoReady(p);
+
         // Increase the number of recieved processes
         sch->receivedPCount++;
     }
@@ -95,6 +113,12 @@ void receiveProcesses(int signum)
 
 void startProcess(process_t *p)
 {
+    if (allocateProcess(sch->memory, p) == false)
+    {
+        insertIntoWait(p);
+        return;
+    }
+
     pid_t pid = fork();
     if (pid == -1)
     {
@@ -104,10 +128,14 @@ void startProcess(process_t *p)
     else if (pid == 0)
     {
         // Read the data of the process and send them
-        char id[5], rt[5];
+        char id[5], rt[5], size[5], start[5], end[5];
         sprintf(id, "%d", p->ID);
         sprintf(rt, "%d", p->RT);
-        char *args[] = {"./process.out", id, rt, (char *)NULL};
+        sprintf(size, "%d", p->size);
+        sprintf(start, "%d", p->interval->start);
+        sprintf(end, "%d", p->interval->end);
+
+        char *args[] = {"./process.out", id, rt, size, start, end, (char *)NULL};
         execv(args[0], args);
         printError("Execl process has failed for creating the process\n");
         exit(-1);
@@ -168,39 +196,31 @@ void updateOutfile(process_t *p)
 {
     float *info = (float *)malloc(4 * sizeof(float));
     info[0] = p->ID;
-    info[1] = p->RT;
-    info[2] = p->RemT;
-    info[3] = p->WT;
-    if (p->state != FINISHED)
+    info[1] = p->size;
+    info[2] = p->interval->start;
+    info[3] = p->interval->end;
+    if (p->state != WAITING)
         insertIntoLog(p->state, info);
-    else
-    {
-        info = (float *)realloc(info, 6 * sizeof(float));
-        info[4] = p->TAT;
-        info[5] = p->WTAT;
-        insertIntoLog(p->state, info);
-    }
+    free(info);
 }
 
 void finishProcess(int signum)
 {
 
-    process_t *p = sch->runningP;         // Update the state of the process
-    p->TAT = getClk() - p->AT;            // Set the turnaround time of the process
-    p->WTAT = (float)p->TAT / p->RT;      // Set the weighted turnaround time of the process
-    p->WT = getClk() - (p->RT) - (p->AT); // Update the waiting time of the process
-    p->state = FINISHED;                  // Update the state
-    sch->totalWT += p->WT;                // Updating the total waiting time
-    sch->busyTime += p->RT;               // Updating the total running time
-    sch->totalWTAT += p->WTAT;            // Updating the total weighted turnaround time
-    sch->finishedPCount++;                // Increment the finished processes count
+    process_t *p = sch->runningP; // Update the state of the process
+    p->state = FINISHED;          // Update the state
+    sch->busyTime += p->RT;       // Updating the total running time
+    sch->finishedPCount++;        // Increment the finished processes count
     int state;
     int pid = wait(&state);
-    updateOutfile(p); // Update the output file
-    free(sch->PCB[p->ID]);
-    sch->runningP = NULL; // Free the running process to choose the next one
+
+    freeMemory(sch->memory, p);     // Free the memory of the finished process
+    updateOutfile(p);               // Update the output file
+    sch->runningP = NULL;           // Free the running process to choose the next one
+    insertIntoReady(getNextWait()); // Insert into the heap the next waiting process
     if (sch->finishedPCount == sch->pCount)
         finishScheduling(0);
+
     // Reset the SIGCHLD signal to this function as a handler
     signal(SIGUSR2, finishProcess);
 }
@@ -318,6 +338,11 @@ void insertIntoReady(process_t *p)
         insert(sch->readyContainer, p);
 }
 
+void insertIntoWait(process_t *p)
+{
+    insert(sch->waitingContainer, p);
+}
+
 void removeFromReady()
 {
     if (sch->algo == RR_t)
@@ -330,12 +355,22 @@ void removeFromReady()
     }
 }
 
+void removeFromWait()
+{
+    deleteMin(sch->waitingContainer);
+}
+
 process_t *getNextReady()
 {
     if (sch->algo == RR_t)
         return front(sch->readyContainer);
     else
         return getMin(sch->readyContainer);
+}
+
+process_t *getNextWait()
+{
+    return getMin(sch->waitingContainer);
 }
 
 bool isReadyEmpty()
@@ -346,6 +381,11 @@ bool isReadyEmpty()
         return isEmptyHeap(sch->readyContainer);
 }
 
+bool isWaitEmpty()
+{
+    return isEmptyHeap(sch->waitingContainer);
+}
+
 void destroyReady()
 {
     if (sch->algo == RR_t)
@@ -354,11 +394,19 @@ void destroyReady()
         destroyHeap(sch->readyContainer);
 }
 
+void destroyWait()
+{
+    destroyHeap(sch->waitingContainer);
+}
+
 void finishScheduling(int signum)
 {
     destroyReady();
+    destroyWait();
+
     float *schStatistics = calculateStatistics();
     generatePrefFile(schStatistics);
+
     printf("FINISHED\n");
     destroyClk(false);
     kill(getppid(), SIGUSR2);

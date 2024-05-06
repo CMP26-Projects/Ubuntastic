@@ -14,6 +14,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+#include "pair.h"
 #include <stdbool.h>
 
 // Uncomment the following line to enable debugging
@@ -23,6 +24,7 @@
 #define SRTN_t 0
 #define HPF_t 1
 #define RR_t 2
+#define MEM_t 3
 #define SHKEY 3000
 #define LINE_SIZE 1000
 typedef int clk_t;
@@ -52,22 +54,24 @@ typedef enum
     RESUMED,
     STOPPED,
     FINISHED,
-    WAITING // FOR PHASE 2
+    WAITING // If the process waits till a memory location is freed suitable for it
 } state_t;
 
 typedef struct
 {
-    pid_t PID;     // Actual ID
-    int ID;        // Simulated ID
-    int priority;  // Priority
-    int RT;        // Run time
-    int RemT;      // Remaining time
-    int WT;        // Waiting time
-    int TAT;       // Turnaround time
-    float WTAT;    // Weighted turnaround time
-    clk_t AT;      // Arrival time
-    clk_t lastRun; // Last time this process has run
-    state_t state; // Current state of the process
+    pid_t PID;        // Actual ID
+    int ID;           // Simulated ID
+    int priority;     // Priority
+    int RT;           // Run time
+    int RemT;         // Remaining time
+    int size;         // Size of the process
+    int WT;           // Waiting time
+    int TAT;          // Turnaround time
+    float WTAT;       // Weighted turnaround time
+    pair_t *interval; // Interval of the process
+    clk_t AT;         // Arrival time
+    clk_t lastRun;    // Last time this process has run
+    state_t state;    // Current state of the process
 } process_t;
 process_t *createProcess(int *info);
 //===============MessageQueue===============//

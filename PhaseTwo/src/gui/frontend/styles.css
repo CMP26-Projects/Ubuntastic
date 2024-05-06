@@ -1,0 +1,142 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #30323F;
+    color: #F9F5F8;
+}
+
+#seed{
+    width:95%;
+}
+header {
+    background-color: #F17A57;
+    text-align: center;
+    margin: 0;
+    font-size: 48px;
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+    font-weight: bolder;
+}
+
+.container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.gif-container {
+    background-color: #737373;
+    border-radius: 10px;
+    padding: 10px;
+    width: 450px;
+    margin-left: calc(50% - 225px);
+}
+
+#ubuntastic-gif {
+    width: 432px;
+    height: 432px;
+}
+
+hr {
+    border-color: #F17A57;
+}
+
+.input-field {
+    margin-bottom: 20px;
+}
+
+.input-field label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.input-field input[type="number"]{
+    width: calc(100% - 30px);
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #737373;
+    background-color: #30323F;
+    color: #F9F5F8;
+}
+.input-field input[type="text"],
+.input-field select {
+    width: calc(100% - 10px);
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #737373;
+    background-color: #30323F;
+    color: #F9F5F8;
+}
+
+.input-field input[type="text"]::placeholder,
+.input-field input[type="number"]::placeholder {
+    color: #737373;
+}
+
+.input-field select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8"><path fill="#F9F5F8" d="M6 8L0 0h12z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: calc(100% - 10px) center;
+}
+
+.button-container {
+    padding-top: 10px;
+    width: 90%;
+    margin: 0 auto;
+    display: flex;
+}
+
+button {
+    flex: 1;
+    margin-left: 5px;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #F17A57;
+    color: #F9F5F8;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:first-child {
+    margin-left: 0;
+}
+
+button:hover {
+    background-color: #E85A3F;
+}
+
+.hidden {
+    display: none;
+}
+
+#start-btn{
+    margin-left: calc(50% - 75px);
+    width: 150px;
+}
+
+#scheduler-status{
+font-size: 48px;
+text-align: center;
+color: #F17A57;    
+}
+
+@keyframes loading {
+    0% {
+        content: ".";
+    }
+    33% {
+        content: "..";
+    }
+    66% {
+        content: "...";
+    }
+}
+
+.loading-dots::after {
+    content: ".";
+    animation: loading 2s infinite;
+}   

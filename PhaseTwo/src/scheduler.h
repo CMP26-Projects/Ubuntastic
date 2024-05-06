@@ -1,16 +1,16 @@
-#include "UI.h"
+#include "memory.h"
 typedef struct
 {
     long mtype;
-    int data[4];
+    int data[5];
 } processMsg;
 
 typedef struct Scheduler
 {
-    int algo;
+    memory_t *memory;
     process_t *runningP;
     process_t *lastRecieved;
-    int timeSlice;
+    int algo;
     int busyTime;
     int finishedPCount;
     int receivedPCount;
@@ -18,6 +18,7 @@ typedef struct Scheduler
     int totalWT;
     float totalWTAT;
     void *readyContainer;
+    void *waitingContainer;
     process_t **PCB;
 } scheduler_t;
 
@@ -41,9 +42,18 @@ int generateOutputImages();
 
 // Ready Container Functions
 void insertIntoReady(process_t *p);
+void insertIntoWait(process_t *p);
+
 void removeFromReady();
+void removeFromWait();
+
 process_t *getNextReady();
+process_t *getNextWait();
+
 bool isReadyEmpty();
+bool isWaitEmpty();
+
+void destroyWait();
 void destroyReady();
 
 // Scheduling Algorithms Functions

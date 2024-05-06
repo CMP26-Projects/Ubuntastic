@@ -42,8 +42,10 @@ process_t *createProcess(int *info)
     pd->AT = info[1];
     pd->RT = info[2];
     pd->priority = info[3];
+    pd->size = info[4];
     pd->RemT = info[2];
-    pd->state = ARRIVED;
+    pd->interval = NULL;
+    pd->state = WAITING;
     pd->lastRun = -1;
     pd->PID = -1;
     pd->WT = 0;

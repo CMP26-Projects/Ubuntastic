@@ -1,0 +1,10 @@
+{
+  "name": "control",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Ahmed Hamdy",
+  "license": "MIT"
+}
