@@ -107,7 +107,7 @@ void printError(char errorMsg[])
 
 void insertIntoLog(state_t state, float *pInfo)
 {
-    FILE *file = fopen("./outputFiles/scheduler.log", "a");
+    FILE *file = fopen("./scheduler.log", "a");
     if (!file)
     {
         printf("Error in opening the file.. ");
@@ -139,7 +139,7 @@ void insertIntoLog(state_t state, float *pInfo)
 
 void generatePrefFile(float *statistics)
 {
-    FILE *file = fopen("./outputFiles/scheduler.perf", "w");
+    FILE *file = fopen("./scheduler.perf", "w");
     if (!file)
     {
         printf("can't open the file\n");

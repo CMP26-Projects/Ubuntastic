@@ -1,8 +1,10 @@
-#include "memory.h"
+
+#include "UI.h"
+#include "ds/memory.h"
 typedef struct
 {
     long mtype;
-    int data[5];
+    int data[6];
 } processMsg;
 
 typedef struct Scheduler
@@ -19,6 +21,7 @@ typedef struct Scheduler
     float totalWTAT;
     void *readyContainer;
     void *waitingContainer;
+    int timeSlice;
     process_t **PCB;
 } scheduler_t;
 

@@ -1,24 +1,18 @@
-#include "pair.h"
 #include "UI.h"
 char *lineToPrint;
 
-int processID, runTime, remainingTime, startTime, size;
-pair_t *interval;
-
+int processID, runTime, remainingTime, startTime;
 void stop(int);
 void resume(int);
 
 int main(int agrc, char *argv[])
 {
+
     // Read the process data
     initClk();
     startTime = getClk();
     processID = atoi(argv[1]);
     runTime = atoi(argv[2]);
-    size = atoi(argv[3]);
-    interval = initializePair(0, size - 1);
-    
-
     remainingTime = runTime;
     // Set the signals' handlers
     signal(SIGTSTP, stop);
@@ -58,7 +52,6 @@ int main(int agrc, char *argv[])
 
     // Return the real process ID to remove its slot from the PCB
     raise(SIGINT);
-    destroyClk(false);
 }
 
 // Stop the process from being executed
@@ -66,12 +59,14 @@ void stop(int signum)
 {
     // Set the runtime of the process of the currecnt remaining time
     runTime = remainingTime;
+
 #ifdef DEBUG
     sprintf(lineToPrint, "I'm the process %d will stop ", processID);
     print(lineToPrint, RED);
     sprintf(lineToPrint, "at time %d", getClk());
     printLine(lineToPrint, RED);
 #endif
+
     raise(SIGSTOP);
     signal(SIGTSTP, stop);
 }
@@ -85,6 +80,7 @@ void resume(int signum)
     sprintf(lineToPrint, "at time %d", getClk());
     printLine(lineToPrint, GRN);
 #endif
+
     startTime = getClk();
     signal(SIGCONT, resume);
 }

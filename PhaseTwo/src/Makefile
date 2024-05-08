@@ -28,8 +28,8 @@ build: clean
 	gcc systemTests/test_generator.c -o systemTests/test.out
 
 run: build
-	@./gen.out ./systemTests/test-5.txt
+	@./gen.out ./systemTests/test-5.txt 1 0
 
 
 clean:
-	@rm -f *.out *.o outputFiles/scheduler.log outputFiles/scheduler.perf systemTests/test_generator.out 
+	@rm -f *.out *.o ./scheduler.log ./scheduler.perf ./test_generator.out 

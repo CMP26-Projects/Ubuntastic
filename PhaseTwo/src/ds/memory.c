@@ -1,19 +1,21 @@
+
 #include "memory.h"
 #include <stdlib.h>
-///================ INITIOALIZES NODE IN MEMORY ===============///
-memoryNode *initializeMemoryNode(int sizet, pair_t *pair, process_t *parent)
+//[Author: Mariam]
+///================ INITIOALIZES NODE IN MEMORY ===============/// =
+memoryNode *initializeMemoryNode(int sizet, pair_t *pair, process_t *patrent)
 {
     memoryNode *node = (memoryNode *)malloc(sizeof(memoryNode));
     node->size = sizet;
     node->interval = pair;
     node->process = NULL;
-    node->parent = parent;
+    node->parent = patrent;
     node->right = NULL;
     node->left = NULL;
-    printf("A new node has created from %d  to %d \n ", pair->start, pair->end);
+    printf("a new node has created from %d  to %d \n ", pair->start, pair->end);
     return node;
 }
-///===================== FREE THE MEMORY NODE =====================///
+///=========FREE THE MEMORY NODE=====================//
 void deleteMemoryNode(memoryNode *node)
 {
     deletePair(node->interval);
@@ -27,7 +29,7 @@ void divideMemory(memoryNode *root)
     root->left = initializeMemoryNode(root->size / 2, leftPair, root);
     pair_t *rightPair = initializePair(root->interval->start + root->size / 2 + 1, root->interval->end);
     root->right = initializeMemoryNode(root->size / 2, rightPair, root);
-    printf("Memory has been divided into two parts successfully :)\n");
+    printf("memory has been divided into  two  : )  \n");
 }
 
 /////============== AFTER DEALLOCATION OF THE WE NEED TO MERGE THE TWO PARTS OF MEMORY ==============///
@@ -48,8 +50,6 @@ void mergeLeafs(memoryNode *root)
     deleteMemoryNode(leftNode);
     deleteMemoryNode(rightNode);
 
-    root->size = root->size * 2;
-
     printf("merged again two parts\n");
 }
 ///// ============INITIALIZE MEMORY ======================//////////////
@@ -61,23 +61,27 @@ memory_t *initializeMemory()
     memory->size = 1024;
     pair_t *pair = initializePair(0, 1024);
     memory->root = initializeMemoryNode(1024, pair, NULL);
-    printf("Memory has been initialized successfully\n");
+    memory->totalAllocated = 1024;
+    printf("memory has been initialized \n");
     return memory;
 }
 ///=============== call this function when you need to allocate a new porccess============//
 bool allocateProcess(memory_t *memory, process_t *process)
 {
+
 #ifdef DEBUG
+
     printf("going to add ................");
 #endif
 
     bool flag = false;
     printf("the id is %d\n", process->ID);
-    addProcess(memory, memory->root, process, &flag);
+    addProcess(memory->root, process, &flag);
     printf("the id is %d\n", process->ID);
     if (flag)
     {
         printf("the process is add sucsessfuly from\n");
+        memory->totalAllocated -= process->size;
     }
     else
     {
@@ -86,20 +90,18 @@ bool allocateProcess(memory_t *memory, process_t *process)
 
     memoryNode *node = search(memory->root, process);
     if (node != NULL)
-    {
         process->interval = node->interval;
-    }
     printf("the id is %d\n", process->ID);
     return flag;
 }
 //=================RECURSION FUNCTION TO ADD NEW NODE IN THE MEMORY TREE=====================//
-void addProcess(memory_t *memory, memoryNode *root, process_t *process, bool *flag)
+void addProcess(memoryNode *root, process_t *process, bool *flag)
 {
     if (*flag == true)
         return;
     if (root->process != NULL)
     {
-        printf("Yes, The process is in the root!\n");
+        printf("yess the process in the root!\n");
         return;
     }
     if (root->size < process->size && root->left == NULL && root->right == NULL)
@@ -111,22 +113,22 @@ void addProcess(memory_t *memory, memoryNode *root, process_t *process, bool *fl
             {
                 mergeLeafs(root);
                 root->process = process;
-                memory->totalAllocated += root->size;
                 *flag = true;
             }
+
         return;
     }
     if (root->left == NULL || root->right == NULL)
     {
         divideMemory(root);
     }
-    addProcess(memory, root->left, process, flag);
+    addProcess(root->left, process, flag);
     if (*flag)
         return;
-    addProcess(memory, root->right, process, flag);
+    addProcess(root->right, process, flag);
 }
 ///=============DEALLOCATE MEMORY TAKEN BY THE PROCESS ==================///
-///=============you need to call it when the process gonna terminate==================///
+//               you need to call it when the process gona terminate
 void freeMemory(memory_t *memory, process_t *process)
 {
     memoryNode *node = search(memory->root, process);
@@ -141,18 +143,16 @@ void freeMemory(memory_t *memory, process_t *process)
     printf("going to free the size of %d  in memory from %d to %d \n ", process->size, node->interval->start, node->interval->end);
     node->process = NULL;
     bool merge = true;
-    memory->totalAllocated -= node->size;
     while (merge && node->parent != NULL)
     {
         printf("loop\n");
         memoryNode *parent = node->parent;
         if (node->parent->left == node && node->parent->right->process == NULL && node->parent->right->right == NULL)
-        {
             mergeLeafs(parent);
-        }
 
         else if (node->parent->right == node && node->parent->left->process == NULL && node->parent->left->left == NULL)
         {
+
             mergeLeafs(parent);
         }
         else
@@ -161,9 +161,10 @@ void freeMemory(memory_t *memory, process_t *process)
         }
         node = node->parent;
     }
+    memory->totalAllocated += process->size;
     printf("out of the loop\n");
 }
-///============FUNCTION THAT SEARCHES FOR THE PROCESS AND RETURNS THE NODE THAT HAS THAT PROCESS======================//
+///============FUCTION THAT SEARCH BY THE PORCESS AND RETURNS THE NODE THAT HAS THAT PORCESS======================//
 //
 memoryNode *search(memoryNode *root, process_t *process)
 {

@@ -14,7 +14,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include "pair.h"
+#include "./ds/pair.h"
 #include <stdbool.h>
 
 // Uncomment the following line to enable debugging

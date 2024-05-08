@@ -1,4 +1,6 @@
 #include "scheduler.h"
+#include "./ds/memory.c"
+#include "./ds/pair.c"
 
 int msgid;
 bool receivingFlag = true;
@@ -7,13 +9,17 @@ char lineToPrint[1000];
 int main(int argc, char *argv[])
 {
     // Set the signals handlers
+
     signal(SIGUSR1, receiveProcesses);
     signal(SIGUSR2, finishProcess);
     signal(SIGINT, finishScheduling);
 
     // Set the connnection with the message queue and the clock
+
     msgid = createMessageQueue();
+
     initClk();
+
     sch = createScheduler(argc, argv);
 
     switch (sch->algo)
@@ -38,14 +44,15 @@ scheduler_t *createScheduler(int argc, char *args[])
     scheduler_t *sc = (scheduler_t *)malloc(sizeof(scheduler_t));
 
     // Validating the number of arguments been sent
-    if (argc != 2)
-    {
-        printError("Invalid number of arguments");
-        exit(-1);
-    }
+    // if (argc != 2)
+    // {
+    //     printError("Invalid number of arguments");
+    //     exit(-1);
+    // }
+    printf("Hi herer =============================\n");
 
     // Initalize the scheduler data members
-    sc->memory = initializeMemory();
+
     sc->pCount = atoi(args[1]);
     sc->algo = atoi(args[2]);
     sc->receivedPCount = 0;
@@ -56,7 +63,7 @@ scheduler_t *createScheduler(int argc, char *args[])
     sc->totalWT = 0;
     sc->totalWTAT = 0.0;
     sc->PCB = (process_t **)malloc((sc->pCount + 1) * sizeof(process_t *));
-
+    sc->memory = initializeMemory();
     sc->waitingContainer = createHeap(MEM_t);
     switch (sc->algo)
     {
@@ -100,9 +107,19 @@ void receiveProcesses(int signum)
         sprintf(lineToPrint, "Scheduler received process %d at timeClk%d\n", p->ID, getClk());
         printLine(lineToPrint, GRN);
         printProcess(p, NRM);
+        ///[Author: Mariam]
+        if (allocateProcess(sch->memory, p))
+        {
+            printf("Now the process found a place in memory and it going to be in ready : )))\n");
+            insertIntoReady(p);
+        }
+        else
+        {
+            printf("Process not found a place so it going to be in the waiting :))) \n");
+            insertIntoWait(p);
+        }
 
         // Add the new process to the scheduler's ready container
-        insertIntoReady(p);
 
         // Increase the number of recieved processes
         sch->receivedPCount++;
@@ -113,12 +130,6 @@ void receiveProcesses(int signum)
 
 void startProcess(process_t *p)
 {
-    if (allocateProcess(sch->memory, p) == false)
-    {
-        insertIntoWait(p);
-        return;
-    }
-
     pid_t pid = fork();
     if (pid == -1)
     {
@@ -128,15 +139,12 @@ void startProcess(process_t *p)
     else if (pid == 0)
     {
         // Read the data of the process and send them
-        char id[5], rt[5], size[5], start[5], end[5];
+        char id[5], rt[5];
         sprintf(id, "%d", p->ID);
         sprintf(rt, "%d", p->RT);
-        sprintf(size, "%d", p->size);
-        sprintf(start, "%d", p->interval->start);
-        sprintf(end, "%d", p->interval->end);
-
-        char *args[] = {"./process.out", id, rt, size, start, end, (char *)NULL};
+        char *args[] = {"./process.out", id, rt, (char *)NULL};
         execv(args[0], args);
+
         printError("Execl process has failed for creating the process\n");
         exit(-1);
     }
@@ -146,6 +154,7 @@ void startProcess(process_t *p)
         p->state = STARTED;
         sch->PCB[p->ID] = p;
         sch->PCB[p->ID]->PID = pid;
+        printf("going to the outfile \n");
         updateOutfile(p);
     }
 }
@@ -206,7 +215,6 @@ void updateOutfile(process_t *p)
 
 void finishProcess(int signum)
 {
-
     process_t *p = sch->runningP; // Update the state of the process
     p->state = FINISHED;          // Update the state
     sch->busyTime += p->RT;       // Updating the total running time
@@ -214,17 +222,33 @@ void finishProcess(int signum)
     int state;
     int pid = wait(&state);
 
-    freeMemory(sch->memory, p);     // Free the memory of the finished process
-    updateOutfile(p);               // Update the output file
-    sch->runningP = NULL;           // Free the running process to choose the next one
-    insertIntoReady(getNextWait()); // Insert into the heap the next waiting process
+    updateOutfile(p);     // Update the output file
+    sch->runningP = NULL; // Free the running process to choose the next one
+    // insertIntoReady(getNextWait()); // Insert into the heap the next waiting process
     if (sch->finishedPCount == sch->pCount)
         finishScheduling(0);
 
     // Reset the SIGCHLD signal to this function as a handler
+    ///[Author: Mariam]
+    freeMemory(sch->memory, p); // free the memory of that process
+    printf("the memory now is  %d \n", sch->memory->totalAllocated);
+    checkWaiting();
+
     signal(SIGUSR2, finishProcess);
 }
+//[Author: Mariam]
+void checkWaiting()
+{
+    process_t *shortest = getNextWait();
 
+    while (shortest != NULL && allocateProcess(sch->memory, shortest))
+    {
+        insertIntoReady(shortest);
+        removeFromWait();
+        printf("check waiting  ==================\n");
+        shortest = getNextWait();
+    }
+}
 void SRTNAlgo()
 {
     int lastClk = getClk();
