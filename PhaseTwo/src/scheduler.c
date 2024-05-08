@@ -65,6 +65,7 @@ scheduler_t *createScheduler(int argc, char *args[])
     sc->PCB = (process_t **)malloc((sc->pCount + 1) * sizeof(process_t *));
     sc->memory = initializeMemory();
     sc->waitingContainer = createHeap(MEM_t);
+    sc->WTATList=(int*)malloc(sc->pCount*sizeof(int));
     switch (sc->algo)
     {
     case RR_t:
@@ -218,6 +219,7 @@ void finishProcess(int signum)
     process_t *p = sch->runningP; // Update the state of the process
     p->state = FINISHED;          // Update the state
     sch->busyTime += p->RT;       // Updating the total running time
+    sch->WTATList[sch->finishedPCount]=p->WTAT;
     sch->finishedPCount++;        // Increment the finished processes count
     int state;
     int pid = wait(&state);
@@ -225,14 +227,15 @@ void finishProcess(int signum)
     updateOutfile(p);     // Update the output file
     sch->runningP = NULL; // Free the running process to choose the next one
     // insertIntoReady(getNextWait()); // Insert into the heap the next waiting process
+    freeMemory(sch->memory, p); // free the memory of that process
+    printf("the memory now is  %d \n", sch->memory->totalAllocated);
+    checkWaiting();
+
     if (sch->finishedPCount == sch->pCount)
         finishScheduling(0);
 
     // Reset the SIGCHLD signal to this function as a handler
     ///[Author: Mariam]
-    freeMemory(sch->memory, p); // free the memory of that process
-    printf("the memory now is  %d \n", sch->memory->totalAllocated);
-    checkWaiting();
 
     signal(SIGUSR2, finishProcess);
 }

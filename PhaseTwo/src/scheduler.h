@@ -18,6 +18,7 @@ typedef struct Scheduler
     int receivedPCount;
     int pCount;
     int totalWT;
+    int* WTATList;
     float totalWTAT;
     void *readyContainer;
     void *waitingContainer;
