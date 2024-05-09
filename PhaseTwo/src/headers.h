@@ -14,8 +14,8 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include "./ds/pair.h"
 #include <stdbool.h>
+#include "./ds/pair.h"
 
 // Uncomment the following line to enable debugging
 #define DEBUG
@@ -53,6 +53,7 @@ typedef enum
     STARTED,
     RESUMED,
     STOPPED,
+    READY,
     FINISHED,
     WAITING // If the process waits till a memory location is freed suitable for it
 } state_t;

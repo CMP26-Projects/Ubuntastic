@@ -28,43 +28,14 @@ queue_t *readFile(char *filePath, queue_t *Pqueue)
 #ifdef DEBUG
     printLine("The processes are read from the file\n", GRN);
     printQueue(Pqueue, MAG);
-#endif
     printf("Number of processes: %d\n", numProcesses);
+#endif
     int info[] = {0, 0, 0, 0, 0};
     process_t *dummy = createProcess(info);
     enqueue(Pqueue, dummy);
     return Pqueue;
 }
 
-void getUserInput(int *schedAlgo, int *timeSlice) // Will get updated and support GUI
-{
-Get_Scheduling_Algorithm:
-    system("clear"); // Clear the terminal
-    printLine("|| Choose a Scheduling Algorithm ||\n", BLU);
-    printLine("For SRTN, Enter 0\nFor HPF, Enter 1\nFor RR, Enter 2\n ", GRN);
-    printLine("Algorithm: ", WHT);
-    scanf("%d", schedAlgo);
-    if (*schedAlgo > 2)
-    {
-        printLine("Invalid Option ->\n", RED);
-        sleepMilliseconds(500);
-        goto Get_Scheduling_Algorithm;
-    }
-
-    if (*schedAlgo == 2)
-    {
-    // For RR get the time slice
-    Get_RR_timeSlice:
-        printLine("||Enter the Time Slice||\nTime: ", BLU);
-        scanf("%d", timeSlice);
-        if (*timeSlice < 0)
-        {
-            printLine("\nInvalid Option -> ", RED);
-            goto Get_RR_timeSlice;
-        }
-    }
-    system("clear");
-}
 void displayScheduler(int algo)
 {
     printLine("The Scheduler Algorithm is: ", BLU);
@@ -107,7 +78,7 @@ void printError(char errorMsg[])
 
 void insertIntoLog(state_t state, float *pInfo)
 {
-    FILE *file = fopen("./scheduler.log", "a");
+    FILE *file = fopen("./outputFiles/scheduler.log", "a");
     if (!file)
     {
         printf("Error in opening the file.. ");
@@ -118,28 +89,52 @@ void insertIntoLog(state_t state, float *pInfo)
     switch (state)
     {
     case STARTED:
-        strcpy(st, "⏳ allocated ⏳");
+        strcpy(st, " started ");
+        break;
+    case ARRIVED:
+        strcpy(st, " arrived ");
         break;
     case STOPPED:
-        strcpy(st, "⛔️ freed ⛔️");
+        strcpy(st, " stopped ");
         break;
     case FINISHED:
-        strcpy(st, "✅ freed ✅");
+        strcpy(st, " finished ");
         break;
     case RESUMED:
-        strcpy(st, "▶️ allocated ▶️");
+        strcpy(st, " resumed ");
         break;
     }
+    fprintf(file, "AT time %d process %d %s total %d remain %d wait %d ", getClk(), (int)pInfo[0], st, (int)pInfo[1], (int)pInfo[2], (int)pInfo[3]);
 
-    fprintf(file, "AT time %d %s %d bytes for process %d from %d to %d ", getClk(), st, (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
+    if (state == FINISHED)
+    {
+        fprintf(file, "TA %d WTA %.2f", (int)pInfo[4], pInfo[5]);
+    }
+    fprintf(file, "\n");
+    fclose(file);
+}
 
+void addMemoryEvent(state_t state, float *pInfo)
+{
+    FILE *file = fopen("./outputFiles/memory.log", "a");
+    if (!file)
+    {
+        printf("Error in opening the file.. ");
+        exit(-1);
+    }
+    char st[30];
+    if(state==READY)
+        fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d ", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
+    else if(state==FINISHED)
+        fprintf(file, "At time %d freed %d bytes from process %d from %d to %d ", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
+    
     fprintf(file, "\n");
     fclose(file);
 }
 
 void generatePrefFile(float *statistics)
 {
-    FILE *file = fopen("./scheduler.perf", "w");
+    FILE *file = fopen("./outputFiles/scheduler.perf", "w");
     if (!file)
     {
         printf("can't open the file\n");

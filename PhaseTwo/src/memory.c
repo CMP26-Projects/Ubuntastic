@@ -1,15 +1,14 @@
 
 #include "memory.h"
-#include <stdlib.h>
 //[Author: Mariam]
-///================ INITIOALIZES NODE IN MEMORY ===============/// =
-memoryNode *initializeMemoryNode(int sizet, pair_t *pair, process_t *patrent)
+///================ INITIOALIZES NODE IN MEMORY ===============///
+memoryNode *initializeMemoryNode(int sizet, pair_t *pair, memoryNode *parent)
 {
     memoryNode *node = (memoryNode *)malloc(sizeof(memoryNode));
     node->size = sizet;
     node->interval = pair;
     node->process = NULL;
-    node->parent = patrent;
+    node->parent = parent;
     node->right = NULL;
     node->left = NULL;
     printf("a new node has created from %d  to %d \n ", pair->start, pair->end);
@@ -22,17 +21,17 @@ void deleteMemoryNode(memoryNode *node)
     if (node != NULL)
         free(node);
 }
-///=========== WHERN THE SIZE OF MEMORY IS GRATER THAN THE NEEDED SIZE WE DIVID BY 2==================//
+///=========== WHEN THE SIZE OF MEMORY IS GREATER THAN THE NEEDED SIZE WE DIVIDE BY 2==================//
 void divideMemory(memoryNode *root)
 {
-    pair_t *leftPair = initializePair(root->interval->start, root->size / 2 + root->interval->start);
+    pair_t *leftPair = initializePair(root->interval->start, root->size / 2 + root->interval->start -1);
     root->left = initializeMemoryNode(root->size / 2, leftPair, root);
-    pair_t *rightPair = initializePair(root->interval->start + root->size / 2 + 1, root->interval->end);
+    pair_t *rightPair = initializePair(root->interval->start + root->size / 2, root->interval->end);
     root->right = initializeMemoryNode(root->size / 2, rightPair, root);
     printf("memory has been divided into  two  : )  \n");
 }
 
-/////============== AFTER DEALLOCATION OF THE WE NEED TO MERGE THE TWO PARTS OF MEMORY ==============///
+/////============== AFTER DEALLOCATION WE NEED TO MERGE THE TWO PARTS OF MEMORY ==============///
 void mergeLeafs(memoryNode *root)
 {
 
@@ -56,24 +55,21 @@ void mergeLeafs(memoryNode *root)
 memory_t *initializeMemory()
 {
     // call this function in schedular to initialize the memory
-    //  we gona need an attribute memory in struct schedular ?
     memory_t *memory = (memory_t *)malloc(sizeof(memory_t));
     memory->size = 1024;
-    pair_t *pair = initializePair(0, 1024);
+    pair_t *pair = initializePair(0, 1023);
     memory->root = initializeMemoryNode(1024, pair, NULL);
     memory->totalAllocated = 1024;
-    printf("memory has been initialized \n");
+    printf("Memory has been initialized \n");
     return memory;
 }
-///=============== call this function when you need to allocate a new porccess============//
+
+///=============== Call this function when you need to allocate a new porccess============//
 bool allocateProcess(memory_t *memory, process_t *process)
 {
-
 #ifdef DEBUG
-
-    printf("going to add ................");
+    printf("going to add ................ \n");
 #endif
-
     bool flag = false;
     printf("the id is %d\n", process->ID);
     addProcess(memory->root, process, &flag);
@@ -115,7 +111,6 @@ void addProcess(memoryNode *root, process_t *process, bool *flag)
                 root->process = process;
                 *flag = true;
             }
-
         return;
     }
     if (root->left == NULL || root->right == NULL)
@@ -149,23 +144,17 @@ void freeMemory(memory_t *memory, process_t *process)
         memoryNode *parent = node->parent;
         if (node->parent->left == node && node->parent->right->process == NULL && node->parent->right->right == NULL)
             mergeLeafs(parent);
-
         else if (node->parent->right == node && node->parent->left->process == NULL && node->parent->left->left == NULL)
-        {
-
             mergeLeafs(parent);
-        }
         else
-        {
             merge = false;
-        }
+
         node = node->parent;
     }
     memory->totalAllocated += process->size;
     printf("out of the loop\n");
 }
-///============FUCTION THAT SEARCH BY THE PORCESS AND RETURNS THE NODE THAT HAS THAT PORCESS======================//
-//
+///============FUNCTION THAT SEARCH BY THE PORCESS AND RETURNS THE NODE THAT HAS THAT PORCESS======================///
 memoryNode *search(memoryNode *root, process_t *process)
 {
     if (root == NULL || process == NULL)

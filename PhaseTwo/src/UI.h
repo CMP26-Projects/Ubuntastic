@@ -14,9 +14,7 @@
 
 
 //Input functions
-void getUserInput(int *schedAlgo, int *timeSlice);
 queue_t* readFile(char*,queue_t*);
-
 
 //Prints the line with the color clr
 void printLine(char line[],char* clr);
@@ -26,7 +24,7 @@ void printError(char errorMsg[]);
 //Outputing Scheduling Statistics
 void insertIntoLog(state_t state,float* pInfo);
 void generatePrefFile(float* statistics);
-
+void addMemoryEvent(state_t state, float *pInfo);
 
 //Printing Data Structures
 void displayScheduler(int algo);

@@ -5,6 +5,8 @@ build: clean
 
 	gcc -c ds/minHeap.c
 
+	gcc -c ds/pair.c
+
 	gcc -c UI.c
 
 	gcc -c headers.c
@@ -15,13 +17,15 @@ build: clean
     
 	gcc -c process_generator.c
 	
-	gcc -c process.c  
+	gcc -c process.c
+	
+	gcc -c memory.c  
 	
 	gcc clk.o UI.o headers.o  queue.o minHeap.o -o clk.out
 	
 	gcc process_generator.o UI.o headers.o  queue.o minHeap.o -o gen.out
 
-	gcc scheduler.o  UI.o headers.o  queue.o minHeap.o -lm -o scheduler.out
+	gcc scheduler.o  UI.o headers.o memory.o pair.o queue.o minHeap.o -lm -o scheduler.out
 
 	gcc process.o UI.o headers.o  queue.o minHeap.o -o process.out
 	

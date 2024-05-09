@@ -1,8 +1,0 @@
-AT time 3 ⏳ allocated ⏳ 1000 bytes for process 1 from 0 to 1024 
-AT time 8 ✅ freed ✅ 1000 bytes for process 1 from 0 to 1024 
-AT time 9 ⏳ allocated ⏳ 100 bytes for process 3 from 0 to 128 
-AT time 10 ✅ freed ✅ 100 bytes for process 3 from 0 to 128 
-AT time 11 ⏳ allocated ⏳ 500 bytes for process 2 from 0 to 512 
-AT time 16 ✅ freed ✅ 500 bytes for process 2 from 0 to 512 
-AT time 17 ⏳ allocated ⏳ 300 bytes for process 4 from 513 to 1024 
-AT time 19 ✅ freed ✅ 300 bytes for process 4 from 513 to 1024 

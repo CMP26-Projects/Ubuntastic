@@ -1,10 +1,8 @@
-
-#include "UI.h"
-#include "ds/memory.h"
+#include "memory.h"
 typedef struct
 {
     long mtype;
-    int data[6];
+    int data[5];
 } processMsg;
 
 typedef struct Scheduler
@@ -18,11 +16,10 @@ typedef struct Scheduler
     int receivedPCount;
     int pCount;
     int totalWT;
-    int* WTATList;
     float totalWTAT;
+    int* WTATList;
     void *readyContainer;
     void *waitingContainer;
-    int timeSlice;
     process_t **PCB;
 } scheduler_t;
 
@@ -39,26 +36,26 @@ void stopProcess(process_t *p);
 void continueProcess(process_t *p);
 void finishProcess(int signum);
 
-// Statistics Functions
-void updateOutfile(process_t *p);
-float *calculateStatistics();
-int generateOutputImages();
+//Statistics Functions
+void updateOutfile(process_t* p);
+float calculateAvgWTA();
+float calculateStdWTA(float avgWTA);
+float* calculateStatistics();
 
 // Ready Container Functions
 void insertIntoReady(process_t *p);
-void insertIntoWait(process_t *p);
-
 void removeFromReady();
-void removeFromWait();
-
 process_t *getNextReady();
-process_t *getNextWait();
-
 bool isReadyEmpty();
-bool isWaitEmpty();
-
-void destroyWait();
 void destroyReady();
+
+//Memory Container Functions
+void insertIntoWait(process_t *p);
+void removeFromWait();
+process_t *getNextWait();
+bool isWaitEmpty();
+void destroyWait();
+void checkWaiting();
 
 // Scheduling Algorithms Functions
 void SRTNAlgo();
