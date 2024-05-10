@@ -106,29 +106,6 @@ def create_log_img(log_file_path):
     
     tree.pack(expand=True, fill="both")
     table_window.update()  # Ensure all widgets are updated
-    plt.figure(figsize=(10, 6))
-
-    times = [int(entry[0]) for entry in process_lifecycle]
-    process_ids = [int(entry[1]) for entry in process_lifecycle]
-    
-    plt.plot(times, process_ids, marker='o', linestyle='-')
-    plt.title('Process Lifecycle')
-    plt.xlabel('Time')
-    plt.ylabel('Process ID')
-    plt.grid(True)
-
-    plt.savefig('outputFiles/process_lifecycle_plot.png')
-    
-    plt.show()
-    tree.pack(expand=True, fill="both")
-
-    table_window.update()
-    x = table_window.winfo_rootx()
-    y = table_window.winfo_rooty()
-    width = table_window.winfo_width()
-    height = table_window.winfo_height()
-    screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
-    screenshot.save("outputFiles/log_table_image.png")
     return
 
 
@@ -212,28 +189,6 @@ def create_mem_img(mem_file_path):
     
     tree.pack(expand=True, fill="both")
     table_window.update()  # Ensure all widgets are updated
-    plt.figure(figsize=(10, 6))
-
-    times = [int(entry[0]) for entry in mem_lifecycle]
-    process_ids = [int(entry[1]) for entry in mem_lifecycle]
-    
-    plt.plot(times, process_ids, marker='o', linestyle='-')
-    plt.title('Memory Lifecycle')
-    plt.xlabel('Time')
-    plt.ylabel('Process ID')
-    plt.grid(True)
-    plt.savefig('outputFiles/mem_lifecycle_plot.png')
-    plt.show()
-
-    tree.pack(expand=True, fill="both")
-
-    table_window.update()
-    x = table_window.winfo_rootx()
-    y = table_window.winfo_rooty()
-    width = table_window.winfo_width()
-    height = table_window.winfo_height()
-    screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
-    screenshot.save("outputFiles/mem_table_image.png")
     return
 
 def create_perf_img(perf_file_path):

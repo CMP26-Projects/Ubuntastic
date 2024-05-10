@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     lineToPrint=(char*)malloc(LINE_SIZE*sizeof(char));
     printLine("Clock starting\n",GRN);
     signal(SIGINT, cleanup);
-    clk_t clk = 0;
+    clk_t clk = -1;
     // Create shared memory for one integer variable 4 bytes
     shmid = shmget(SHKEY, 4, IPC_CREAT | 0644);
     if ((long)shmid == -1)

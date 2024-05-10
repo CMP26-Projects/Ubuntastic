@@ -1,12 +1,22 @@
 #include "UI.h"
 queue_t *readFile(char *filePath, queue_t *Pqueue)
 {
-    int numProcesses = 0;
-    // Initialize the Process Queue
-
-    int id, runTime, arrivalTime, priority, memSize;
+    FILE *inputFile = fopen("./outputFiles/memory.log", "w");
+    if (!inputFile)
+    {
+        printf("Error in opening the file.. ");
+        exit(-1);
+    }
+    inputFile = fopen("./outputFiles/scheduler.log", "w");
+    if (!inputFile)
+    {
+        printf("Error in opening the file.. ");
+        exit(-1);
+    }
+    int id, runTime, arrivalTime, priority, memSize,numProcesses = 0;
     char firstLine[100];
-    FILE *inputFile = fopen(filePath, "r");
+
+    inputFile = fopen(filePath, "r");
     if (!inputFile)
     {
         printError("Error in opening the processes.txt file\n");
@@ -24,12 +34,6 @@ queue_t *readFile(char *filePath, queue_t *Pqueue)
         numProcesses++;
     }
     fclose(inputFile);
-// Testing
-#ifdef DEBUG
-    printLine("The processes are read from the file\n", GRN);
-    printQueue(Pqueue, MAG);
-    printf("Number of processes: %d\n", numProcesses);
-#endif
     int info[] = {0, 0, 0, 0, 0};
     process_t *dummy = createProcess(info);
     enqueue(Pqueue, dummy);
@@ -89,28 +93,27 @@ void insertIntoLog(state_t state, float *pInfo)
     switch (state)
     {
     case STARTED:
-        strcpy(st, " started ");
+        strcpy(st, "started");
         break;
     case ARRIVED:
-        strcpy(st, " arrived ");
+        strcpy(st, "arrived");
         break;
     case STOPPED:
-        strcpy(st, " stopped ");
+        strcpy(st, "stopped");
         break;
     case FINISHED:
-        strcpy(st, " finished ");
+        strcpy(st, "finished");
         break;
     case RESUMED:
-        strcpy(st, " resumed ");
+        strcpy(st, "resumed");
         break;
     }
-    fprintf(file, "AT time %d process %d %s total %d remain %d wait %d ", getClk(), (int)pInfo[0], st, (int)pInfo[1], (int)pInfo[2], (int)pInfo[3]);
-
-    if (state == FINISHED)
-    {
-        fprintf(file, "TA %d WTA %.2f", (int)pInfo[4], pInfo[5]);
-    }
-    fprintf(file, "\n");
+    
+    if (state != FINISHED)
+        fprintf(file, "AT time %d\tprocess %d\t%s\t\ttotal %d\tremain %d\twait %d\n", getClk(), (int)pInfo[0], st, (int)pInfo[1], (int)pInfo[2], (int)pInfo[3]);
+    else
+        fprintf(file, "AT time %d\tprocess %d\t%s\ttotal %d\tremain %d\twait %d\tTA %d\tWTA %.2f\n", getClk(), (int)pInfo[0], st, (int)pInfo[1], (int)pInfo[2], (int)pInfo[3],(int)pInfo[4], pInfo[5]);
+    
     fclose(file);
 }
 
@@ -122,13 +125,10 @@ void addMemoryEvent(state_t state, float *pInfo)
         printf("Error in opening the file.. ");
         exit(-1);
     }
-    char st[30];
     if(state==READY)
-        fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d ", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
+        fprintf(file, "At\ttime\t%d\tallocated\t%d\tbytes\tfor\t\tprocess\t%d\tfrom\t%d\tto\t%d\n", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
     else if(state==FINISHED)
-        fprintf(file, "At time %d freed %d bytes from process %d from %d to %d ", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
-    
-    fprintf(file, "\n");
+        fprintf(file, "At\ttime\t%d\tfreed\t\t%d\tbytes\tfrom\tprocess\t%d\tfrom\t%d\tto\t%d\n", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
     fclose(file);
 }
 

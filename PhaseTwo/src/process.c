@@ -18,10 +18,10 @@ int main(int agrc, char *argv[])
     signal(SIGTSTP, stop);
     signal(SIGCONT, resume);
     lineToPrint = (char *)malloc(LINE_SIZE * sizeof(char));
-#ifdef DEBUG
-    sprintf(lineToPrint, "The process started with pid= %d \n", processID);
-    printLine(lineToPrint, GRN);
-#endif
+    #ifdef DEBUG
+        sprintf(lineToPrint, "The process started with pid= %d \n", processID);
+        printLine(lineToPrint, GRN);
+    #endif
     clk_t lastClk = getClk();
     while (remainingTime > 0)
     {
@@ -29,28 +29,7 @@ int main(int agrc, char *argv[])
             continue;
         lastClk++;
         remainingTime = runTime + startTime - getClk();
-#ifdef DEBUG
-        sprintf(lineToPrint, "Reminaing for process (%d)", processID);
-        print(lineToPrint, GRN);
-        sprintf(lineToPrint, " = %d ", remainingTime);
-        printLine(lineToPrint, GRN);
-#endif
     }
-// Clear Resources
-//  destroyClk(false);
-// Notify scheduler that the process has finished(it will send SIGCHLD to the scheduler)
-#ifdef DEBUG
-    sprintf(lineToPrint, "The process %d has finished", processID);
-    print(lineToPrint, GRN);
-    sprintf(lineToPrint, " at timeCLk %d", getClk());
-    print(lineToPrint, GRN);
-    sprintf(lineToPrint, " and i will notify scheduler with pid %d\n", getppid());
-    printLine(lineToPrint, GRN);
-#endif
-
-    kill(getppid(), SIGUSR2);
-
-    // Return the real process ID to remove its slot from the PCB
     raise(SIGINT);
 }
 
@@ -80,7 +59,6 @@ void resume(int signum)
     sprintf(lineToPrint, "at time %d", getClk());
     printLine(lineToPrint, GRN);
 #endif
-
     startTime = getClk();
     signal(SIGCONT, resume);
 }

@@ -1,24 +1,10 @@
-At time 3 process 1  started  total 5 remain 5 wait 0 
-At time 8 process 1  finished  total 5 remain 0 wait 0 TA 5 WTA 1.00
-At time 9 process 3  started  total 1 remain 1 wait 0 
-At time 10 process 3  finished  total 1 remain 0 wait 3 TA 4 WTA 4.00
-At time 11 process 2  started  total 5 remain 5 wait 0 
-At time 16 process 2  finished  total 5 remain 0 wait 6 TA 11 WTA 2.20
-At time 17 process 5  started  total 2 remain 2 wait 0 
-At time 19 process 5  finished  total 2 remain 0 wait 10 TA 12 WTA 6.00
-At time 20 process 4  started  total 2 remain 2 wait 0 
-At time 22 process 4  finished  total 2 remain 0 wait 13 TA 15 WTA 7.50
-At time 23 process 6  started  total 2 remain 2 wait 0 
-At time 25 process 6  finished  total 2 remain 0 wait 16 TA 18 WTA 9.00
-AT time 3 process 1  started  total 5 remain 5 wait 0 
-AT time 8 process 1  finished  total 5 remain 0 wait 0 TA 5 WTA 1.00
-AT time 9 process 3  started  total 1 remain 1 wait 0 
-AT time 10 process 3  finished  total 1 remain 0 wait 3 TA 4 WTA 4.00
-AT time 11 process 2  started  total 5 remain 5 wait 0 
-AT time 16 process 2  finished  total 5 remain 0 wait 6 TA 11 WTA 2.20
-AT time 17 process 5  started  total 2 remain 2 wait 0 
-AT time 19 process 5  finished  total 2 remain 0 wait 10 TA 12 WTA 6.00
-AT time 20 process 4  started  total 2 remain 2 wait 0 
-AT time 22 process 4  finished  total 2 remain 0 wait 13 TA 15 WTA 7.50
-AT time 23 process 6  started  total 2 remain 2 wait 0 
-AT time 25 process 6  finished  total 2 remain 0 wait 16 TA 18 WTA 9.00
+AT time 1	process 1	started		total 2	remain 2	wait 0
+AT time 3	process 1	finished	total 2	remain 0	wait 0	TA 2	WTA 1.00
+AT time 10	process 2	started		total 4	remain 4	wait 0
+AT time 14	process 2	finished	total 4	remain 0	wait 0	TA 4	WTA 1.00
+AT time 20	process 3	started		total 7	remain 7	wait 0
+AT time 27	process 3	finished	total 7	remain 0	wait 0	TA 7	WTA 1.00
+AT time 27	process 4	started		total 5	remain 5	wait 4
+AT time 32	process 4	finished	total 5	remain 0	wait 4	TA 9	WTA 1.80
+AT time 34	process 5	started		total 3	remain 3	wait 0
+AT time 37	process 5	finished	total 3	remain 0	wait 0	TA 3	WTA 1.00

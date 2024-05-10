@@ -16,8 +16,7 @@ typedef struct Scheduler
     int receivedPCount;
     int pCount;
     int totalWT;
-    float totalWTAT;
-    int* WTATList;
+    float* WTATList;
     void *readyContainer;
     void *waitingContainer;
     process_t **PCB;
@@ -35,6 +34,7 @@ void startProcess(process_t *p);
 void stopProcess(process_t *p);
 void continueProcess(process_t *p);
 void finishProcess(int signum);
+void handleRemT();
 
 //Statistics Functions
 void updateOutfile(process_t* p);
