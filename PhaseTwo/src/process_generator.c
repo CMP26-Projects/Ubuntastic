@@ -42,10 +42,10 @@ int main(int argc, char *argv[])
     }
     else if (clk == 0)
     {
-#ifdef DEBUG
-        sprintf(lineToPrint, "I'm the clock after being forked\n");
-        printLine(lineToPrint, GRN);
-#endif
+        // #ifdef DEBUG
+        //         sprintf(lineToPrint, "I'm the clock after being forked\n");
+        //         printLine(lineToPrint, GRN);
+        // #endif
         char *args[] = {"./clk.out", (char *)NULL};
         execv(args[0], args);
         printError("Execl process has failed for creating the clock\n");
@@ -71,10 +71,10 @@ int main(int argc, char *argv[])
             sprintf(s, "%d", schedAlgo);
             sprintf(t, "%d", timeSlice);
 
-#ifdef DEBUG
-            sprintf(lineToPrint, "I'm the scheduler after being forked\n");
-            printLine(lineToPrint, GRN);
-#endif
+            // #ifdef DEBUG
+            //             sprintf(lineToPrint, "I'm the scheduler after being forked\n");
+            //             printLine(lineToPrint, GRN);
+            // #endif
             char *args[] = {"./scheduler.out", n, s, t, (char *)NULL};
             execv(args[0], args);
             printError("Execl process has failed for creating the scheduler\n");
@@ -83,35 +83,40 @@ int main(int argc, char *argv[])
         else
         {
             initClk();
-            clk_t lastClk = getClk();
+            clk_t lastClk = 0;
+            printf("Generator: I'm the generator and the last clock is %d\n", lastClk);
             process_t *P = front(pQueue);
-#ifdef DEBUG
-            sprintf(lineToPrint, "I'm the generator after forking the clock with pid= %d", clk);
-            print(lineToPrint, GRN);
-            sprintf(lineToPrint, "and the scheduler with pid = %d\n", scheduler);
-            print(lineToPrint, GRN);
-#endif
+            // #ifdef DEBUG
+            //             sprintf(lineToPrint, "I'm the generator after forking the clock with pid= %d", clk);
+            //             print(lineToPrint, GRN);
+            //             sprintf(lineToPrint, "and the scheduler with pid = %d\n", scheduler);
+            //             print(lineToPrint, GRN);
+            // #endif
             while (true)
             {
                 clk_t curTime = getClk();
 
                 if (curTime == lastClk)
+                {
                     continue;
+                }
+                printf("Generator: I'm waiting for the clock to change and current = %d, prev = %d\n", curTime, lastClk);
 
-                lastClk++;
+                lastClk = curTime;
                 while (!isEmptyQueue(pQueue) && P != NULL && curTime >= P->AT && P->ID != 0)
                 {
                     processMsg sendingProcess = createProcessMessage(P);
+                    printf("Genrator: I will send the process with ID %d at time %d\n", P->ID, curTime);
                     int msgSending = msgsnd(msgid, &sendingProcess, sizeof(sendingProcess.data), !IPC_NOWAIT);
 
                     if (msgSending == -1)
                         printError("No message to send\n");
 
-#ifdef DEBUG
-                    sprintf(lineToPrint, "Generator sent process at time clk %d\n", getClk());
-                    printLine(lineToPrint, GRN);
-                    printProcess(P, YEL);
-#endif
+                    // #ifdef DEBUG
+                    //                     sprintf(lineToPrint, "Generator sent process at time clk %d\n", getClk());
+                    //                     printLine(lineToPrint, GRN);
+                    //                     printProcess(P, YEL);
+                    // #endif
                     dequeue(pQueue);
                     P = front(pQueue);
                 }

@@ -36,4 +36,4 @@ run: build
 
 
 clean:
-	@rm -f *.out *.o ./scheduler.log ./scheduler.perf ./test_generator.out 
+	@rm -f *.out *.o ./outputFiles/scheduler.log ./outputFiles/scheduler.perf ./outputFiles/test_generator.out  ./outputFiles/memory.log

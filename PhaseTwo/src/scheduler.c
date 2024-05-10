@@ -14,9 +14,11 @@ int main(int argc, char *argv[])
     signal(SIGUSR1, receiveProcesses);
     signal(SIGUSR2, finishProcess);
     signal(SIGINT, finishScheduling);
-    
-    // Create scheduler 
+
+    // Create scheduler
+    printf("I will initiate the scheduler now at time % d \n", getClk());
     sch = createScheduler(argc, argv);
+    printf("I have initiated the scheduler now at time % d \n", getClk());
 
     switch (sch->algo)
     {
@@ -54,7 +56,7 @@ scheduler_t *createScheduler(int argc, char *args[])
     sc->PCB = (process_t **)malloc((sc->pCount + 1) * sizeof(process_t *));
     sc->memory = initializeMemory();
     sc->waitingContainer = createHeap(MEM_t);
-    sc->WTATList=(int*)malloc(sc->pCount*sizeof(int));
+    sc->WTATList = (int *)malloc(sc->pCount * sizeof(int));
     switch (sc->algo)
     {
     case RR_t:
@@ -80,16 +82,17 @@ void SRTNAlgo()
     int lastClk = -1;
     while (true)
     {
-        if (lastClk == getClk())    // It's the same timeclk, so no need to process anything
+        if (lastClk == getClk()) // It's the same timeclk, so no need to process anything
             continue;
 
-        lastClk=getClk();
+        lastClk = getClk();
 
         if (sch->runningP != NULL)
             sch->runningP->RemT--;
 
-        while (receivingFlag);      // Wait to get all the processes arriving at this time stamp
-        receivingFlag = true;       // Reset the flag to true to receive the new processes at the next time stamp
+        while (receivingFlag)
+            ;                 // Wait to get all the processes arriving at this time stamp
+        receivingFlag = true; // Reset the flag to true to receive the new processes at the next time stamp
         process_t *shortest = getNextReady();
 
         if (!isReadyEmpty())
@@ -98,13 +101,13 @@ void SRTNAlgo()
             {
 
                 stopProcess(sch->runningP);
-                continueProcess(shortest);
                 removeFromReady();
+                continueProcess(shortest);
             }
             else if (sch->runningP == NULL)
             {
-                continueProcess(shortest);
                 removeFromReady();
+                continueProcess(shortest);
             }
         }
     }
@@ -112,26 +115,35 @@ void SRTNAlgo()
 
 void HPFAlgo()
 {
-    int lastClk = -1;
+    int lastClk = 0;
+    printf("I'm in HPF: The clock now is %d \n", getClk());
     while (true)
     {
-        if (lastClk == getClk())    // It's the same timeclk, so no need to process anything
+        if (lastClk == getClk()) // It's the same timeclk, so no need to process anything
             continue;
         // sleepMilliseconds(180);
-        lastClk=getClk();
+        printf("I'm in HPF: The clock now is %d \n", getClk());
+        lastClk = getClk();
         if (sch->runningP != NULL)
             sch->runningP->RemT--;
-        while (receivingFlag);      // Wait to get all the processes arriving at this time stamp
-        receivingFlag = true;       // Reset the flag to true to receive the new processes at the next time stamp
+        while (receivingFlag)
+            ; // Wait to get all the processes arriving at this time stamp
+        printf("HPF: I have recieved a process at time %d \n", getClk());
+        receivingFlag = true; // Reset the flag to true to receive the new processes at the next time stamp
 
         if (isReadyEmpty() && sch->runningP == NULL) // There is no ready processes to run, so no need to process anything
             continue;
+
+        printf("HPF: I will try fork the process at time = %d \n", getClk());
 
         if (sch->runningP == NULL) // There is no process running process, so run the next ready process if exists.
         {
             process_t *shortest = getNextReady();
             removeFromReady();
+            printf("HPF: I will fork the process at time = %d \n", getClk());
+            shortest->lastRun = lastClk;
             continueProcess(shortest);
+            printf("HPF: I have forked the process at time = %d \n", getClk());
         }
     }
 }
@@ -142,9 +154,9 @@ void RRAlgo(int timeSlice)
     int lastClk = -1;
     while (true)
     {
-        if (lastClk == getClk())    // It's the same timeclk, so no need to process anything
+        if (lastClk == getClk()) // It's the same timeclk, so no need to process anything
             continue;
-        lastClk=getClk();
+        lastClk = getClk();
 
         // sleepMilliseconds(180);
         if (sch->runningP != NULL)
@@ -153,10 +165,11 @@ void RRAlgo(int timeSlice)
             quanta++;
         }
 
-        while (receivingFlag);      // Wait to get all the processes arriving at this time stamp
-        receivingFlag = true;       // Reset the flag to true to receive the new processes at the next time stamp
+        while (receivingFlag)
+            ;                 // Wait to get all the processes arriving at this time stamp
+        receivingFlag = true; // Reset the flag to true to receive the new processes at the next time stamp
         process_t *nextP = getNextReady();
-        if (!isReadyEmpty())        // There is no ready processes to run, so no need to process anything
+        if (!isReadyEmpty()) // There is no ready processes to run, so no need to process anything
         {
             if (sch->runningP != NULL)
             {
@@ -193,21 +206,24 @@ void receiveProcesses(int signum)
 
         // Create a process of the recieved data
         process_t *p = createProcess(msg.data);
-        p->state = WAITING;
         // Set this process as the last received one
         sprintf(lineToPrint, "Scheduler received process %d at timeClk%d\n", p->ID, getClk());
         printLine(lineToPrint, GRN);
         printProcess(p, NRM);
         ///[Author: Mariam]
+        printf("I will try to allocate the process in memory and the time now is %d \n", getClk());
         if (allocateProcess(sch->memory, p))
         {
             printf("Now the process found a place in memory and it going to be in ready : )))\n");
             insertIntoReady(p);
+            printf("Allocator: The time now is %d and I will attach to log file \n", getClk());
             updateOutfile(p);
         }
         else
         {
             printf("Process not found a place so it going to be in the waiting :))) \n");
+            p->state = WAITING;
+
             insertIntoWait(p);
         }
         // Increase the number of recieved processes
@@ -264,7 +280,9 @@ void stopProcess(process_t *p)
 
 void continueProcess(process_t *p)
 {
+    // p->lastRun = getClk(); // Set the last time this process has run
     sch->runningP = p;
+    printf("Continue Process: The process %d will continue now at time %d\n", p->ID, getClk());
     if (p->RT == p->RemT) // The first time to run this process
         startProcess(p);
     else
@@ -272,7 +290,6 @@ void continueProcess(process_t *p)
         // It has run before
         int busyTime = (p->RT) - (p->RemT);    // Get the total time this process has run
         p->WT = getClk() - busyTime - (p->AT); // Update the waiting time of the process
-        p->lastRun = getClk();                 // Set the last time this process has run
         p->state = RESUMED;
         kill(sch->PCB[p->ID]->PID, SIGCONT); // Send SIGCONT to resume the process
         updateOutfile(p);
@@ -283,15 +300,15 @@ void finishProcess(int signum)
 {
     process_t *p = sch->runningP; // Update the state of the process
     p->state = FINISHED;          // Update the state
-    p->RemT=0;
-    sch->busyTime += p->RT;       // Updating the total running time
+    p->RemT = 0;
+    sch->busyTime += p->RT;               // Updating the total running time
     p->TAT = getClk() - p->AT;            // Set the turnaround time of the process
     p->WTAT = (float)p->TAT / p->RT;      // Set the weighted turnaround time of the process
     p->WT = getClk() - (p->RT) - (p->AT); // Update the waiting time of the process
-    sch->WTATList[sch->finishedPCount]=p->WTAT;
-    sch->totalWTAT += p->WTAT;            // Updating the total weighted turnaround time
-    sch->totalWT+=p->WT;
-    sch->finishedPCount++;        // Increment the finished processes count
+    sch->WTATList[sch->finishedPCount] = p->WTAT;
+    sch->totalWTAT += p->WTAT; // Updating the total weighted turnaround time
+    sch->totalWT += p->WT;
+    sch->finishedPCount++; // Increment the finished processes count
     int state;
     int pid = wait(&state);
 
@@ -299,7 +316,7 @@ void finishProcess(int signum)
     sch->runningP = NULL; // Free the running process to choose the next one
     // insertIntoReady(getNextWait()); // Insert into the heap the next waiting process
     freeMemory(sch->memory, p); // free the memory of that process
-    
+
     printf("the memory now is  %d \n", sch->memory->totalAllocated);
     checkWaiting();
 
@@ -315,7 +332,7 @@ void finishProcess(int signum)
 void updateOutfile(process_t *p)
 {
     float *info = (float *)malloc(4 * sizeof(float));
-    if (p->state == READY||p->state == FINISHED)
+    if (p->state == READY || p->state == FINISHED)
     {
         info[0] = p->ID;
         info[1] = p->size;
@@ -327,7 +344,7 @@ void updateOutfile(process_t *p)
     info[1] = p->RT;
     info[2] = p->RemT;
     info[3] = p->WT;
-    if(p->state!= READY)
+    if (p->state != READY)
     {
         if (p->state != FINISHED)
             insertIntoLog(p->state, info);
@@ -344,32 +361,32 @@ void updateOutfile(process_t *p)
 
 float calculateAvgWTA()
 {
-    float totalWTA=0.0;
-    for(int i=0;i<sch->pCount;i++)
+    float totalWTA = 0.0;
+    for (int i = 0; i < sch->pCount; i++)
     {
-        totalWTA+=sch->WTATList[i];
+        totalWTA += sch->WTATList[i];
     }
-    printf("avg WTA%f",totalWTA/(float)sch->pCount);
-    return totalWTA/(float)sch->pCount;
+    printf("avg WTA%f", totalWTA / (float)sch->pCount);
+    return totalWTA / (float)sch->pCount;
 }
 float calculateStdWTA(float avgWTA)
 {
-    float totalWTAT=0;
-    for(int i=0;i<sch->pCount;i++)
+    float totalWTAT = 0;
+    for (int i = 0; i < sch->pCount; i++)
     {
-        totalWTAT+=pow((avgWTA-(sch->WTATList[i])),2);
+        totalWTAT += pow((avgWTA - (sch->WTATList[i])), 2);
     }
-    float r=sqrt(totalWTAT/sch->pCount);
-    printf("std= %f",r);
-    return sqrt(totalWTAT/sch->pCount);
+    float r = sqrt(totalWTAT / sch->pCount);
+    printf("std= %f", r);
+    return sqrt(totalWTAT / sch->pCount);
 }
 float *calculateStatistics()
 {
     float *schStatistics = (float *)malloc(4 * sizeof(float));
-    schStatistics[0] =(sch->pCount==0)? 0 : (sch->busyTime * 100) / (float)getClk();                // CPU_Utiliziation
-    schStatistics[1] =(sch->pCount==0)? 0 : calculateAvgWTA();                           // Avg_WTA
-    schStatistics[2] =(sch->pCount==0)? 0 : (float)sch->totalWT / sch->pCount;                      // Avg_Waiting
-    schStatistics[3] =(sch->pCount==0)? 0 : calculateStdWTA(schStatistics[1]); // StdWTAT
+    schStatistics[0] = (sch->pCount == 0) ? 0 : (sch->busyTime * 100) / (float)getClk(); // CPU_Utiliziation
+    schStatistics[1] = (sch->pCount == 0) ? 0 : calculateAvgWTA();                       // Avg_WTA
+    schStatistics[2] = (sch->pCount == 0) ? 0 : (float)sch->totalWT / sch->pCount;       // Avg_Waiting
+    schStatistics[3] = (sch->pCount == 0) ? 0 : calculateStdWTA(schStatistics[1]);       // StdWTAT
     return schStatistics;
 }
 
@@ -390,7 +407,7 @@ void checkWaiting()
 
 void insertIntoReady(process_t *p)
 {
-    p->state=READY;
+    p->state = READY;
     if (sch->algo == RR_t)
         enqueue(sch->readyContainer, p);
     else

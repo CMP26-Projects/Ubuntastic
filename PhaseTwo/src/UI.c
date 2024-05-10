@@ -123,11 +123,11 @@ void addMemoryEvent(state_t state, float *pInfo)
         exit(-1);
     }
     char st[30];
-    if(state==READY)
+    if (state == READY)
         fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d ", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
-    else if(state==FINISHED)
+    else if (state == FINISHED)
         fprintf(file, "At time %d freed %d bytes from process %d from %d to %d ", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
-    
+
     fprintf(file, "\n");
     fclose(file);
 }

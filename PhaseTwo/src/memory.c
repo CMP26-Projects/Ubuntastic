@@ -11,7 +11,7 @@ memoryNode *initializeMemoryNode(int sizet, pair_t *pair, memoryNode *parent)
     node->parent = parent;
     node->right = NULL;
     node->left = NULL;
-    printf("a new node has created from %d  to %d \n ", pair->start, pair->end);
+    // printf("a new node has created from %d  to %d \n ", pair->start, pair->end);
     return node;
 }
 ///=========FREE THE MEMORY NODE=====================//
@@ -28,7 +28,7 @@ void divideMemory(memoryNode *root)
     root->left = initializeMemoryNode(root->size / 2, leftPair, root);
     pair_t *rightPair = initializePair(root->interval->start + root->size / 2, root->interval->end);
     root->right = initializeMemoryNode(root->size / 2, rightPair, root);
-    printf("memory has been divided into  two  : )  \n");
+    // printf("memory has been divided into  two  : )  \n");
 }
 
 /////============== AFTER DEALLOCATION WE NEED TO MERGE THE TWO PARTS OF MEMORY ==============///
@@ -37,7 +37,7 @@ void mergeLeafs(memoryNode *root)
 
     if (root->parent == NULL)
     {
-        printf("Cannot merge further. Root node reached.\n");
+        // printf("Cannot merge further. Root node reached.\n");
         return;
     }
 
@@ -49,7 +49,7 @@ void mergeLeafs(memoryNode *root)
     deleteMemoryNode(leftNode);
     deleteMemoryNode(rightNode);
 
-    printf("merged again two parts\n");
+    // printf("merged again two parts\n");
 }
 ///// ============INITIALIZE MEMORY ======================//////////////
 memory_t *initializeMemory()
@@ -60,7 +60,7 @@ memory_t *initializeMemory()
     pair_t *pair = initializePair(0, 1023);
     memory->root = initializeMemoryNode(1024, pair, NULL);
     memory->totalAllocated = 1024;
-    printf("Memory has been initialized \n");
+    // printf("Memory has been initialized \n");
     return memory;
 }
 
@@ -68,12 +68,12 @@ memory_t *initializeMemory()
 bool allocateProcess(memory_t *memory, process_t *process)
 {
 #ifdef DEBUG
-    printf("going to add ................ \n");
+    // printf("going to add ................ \n");
 #endif
     bool flag = false;
-    printf("the id is %d\n", process->ID);
+    // printf("the id is %d\n", process->ID);
     addProcess(memory->root, process, &flag);
-    printf("the id is %d\n", process->ID);
+    // printf("the id is %d\n", process->ID);
     if (flag)
     {
         printf("the process is add sucsessfuly from\n");
@@ -81,13 +81,13 @@ bool allocateProcess(memory_t *memory, process_t *process)
     }
     else
     {
-        printf("there is no place to add the process to memory !\n");
+        // printf("there is no place to add the process to memory !\n");
     }
 
     memoryNode *node = search(memory->root, process);
     if (node != NULL)
         process->interval = node->interval;
-    printf("the id is %d\n", process->ID);
+    // printf("the id is %d\n", process->ID);
     return flag;
 }
 //=================RECURSION FUNCTION TO ADD NEW NODE IN THE MEMORY TREE=====================//
@@ -97,7 +97,7 @@ void addProcess(memoryNode *root, process_t *process, bool *flag)
         return;
     if (root->process != NULL)
     {
-        printf("yess the process in the root!\n");
+        // printf("yess the process in the root!\n");
         return;
     }
     if (root->size < process->size && root->left == NULL && root->right == NULL)
@@ -129,18 +129,18 @@ void freeMemory(memory_t *memory, process_t *process)
     memoryNode *node = search(memory->root, process);
     if (node == NULL)
     {
-        printf("Warinning the process not found !\n");
+        // printf("Warinning the process not found !\n");
     }
     else
     {
-        printf("the porcess found and going to be freed from memory");
+        // printf("the porcess found and going to be freed from memory");
     }
-    printf("going to free the size of %d  in memory from %d to %d \n ", process->size, node->interval->start, node->interval->end);
+    // printf("going to free the size of %d  in memory from %d to %d \n ", process->size, node->interval->start, node->interval->end);
     node->process = NULL;
     bool merge = true;
     while (merge && node->parent != NULL)
     {
-        printf("loop\n");
+        // printf("loop\n");
         memoryNode *parent = node->parent;
         if (node->parent->left == node && node->parent->right->process == NULL && node->parent->right->right == NULL)
             mergeLeafs(parent);
@@ -152,7 +152,7 @@ void freeMemory(memory_t *memory, process_t *process)
         node = node->parent;
     }
     memory->totalAllocated += process->size;
-    printf("out of the loop\n");
+    // printf("out of the loop\n");
 }
 ///============FUNCTION THAT SEARCH BY THE PORCESS AND RETURNS THE NODE THAT HAS THAT PORCESS======================///
 memoryNode *search(memoryNode *root, process_t *process)
