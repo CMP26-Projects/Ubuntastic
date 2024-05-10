@@ -55,21 +55,13 @@
   "C_Cpp_Runner.useLeakSanitizer": false,
   "C_Cpp_Runner.showCompilationTime": false,
   "C_Cpp_Runner.useLinkTimeOptimization": false,
-
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.associations": {
-    "headers.h": "c",
     "scheduler.h": "c",
-    "minheap.h": "c",
-    "processUnits.h": "c",
-    "node.h": "c",
-    "linkedList.h": "c",
-    "queue.h": "c",
-    "stdio.h": "c",
+    "pair.h": "c",
+    "headers.h": "c",
     "ui.h": "c",
-    "stdbool.h": "c",
-    "txt": "c",
-    "stdlib.h": "c",
-    "signal.h": "c"
+    "minheap.h": "c",
+    "memory.h": "c"
   }
 }

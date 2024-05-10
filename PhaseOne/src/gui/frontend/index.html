@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ubuntastic</title>
+    <link rel="stylesheet" href="styles.css"> 
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <link rel="icon" href="logo.svg" type="image/x-icon">
+</head>
+<body>
+    <div class="container">
+        <div class="gif-container">
+            <iframe src="ubuntastic.gif" frameBorder="0" allowFullScreen id="ubuntastic-gif"></iframe>     
+        </div>
+        <div id="input-fields-container">
+            <div class="input-field">
+                <label for="seed">Seed:</label>
+                <input type="text" name="seed" id="seed">
+                <div class="button-container">
+                    <button id="select-path">Select Existing Seed</button>
+                    <button id="make-path">Make New Seed</button>
+                </div>
+            </div>
+            <div class="input-field hidden" id="processes-num-field">
+              <label for="processes-num">Number of Processes:</label>
+              <input type="number" name="processes-num" id="processes-num" min="1" placeholder="Enter number of processes">
+              <div class="button-container">
+                <button id="generate-seed">Generate Seed</button>
+              </div>
+            </div>
+            <div class="input-field">
+                <label for="schedulerAlgo">Algorithm:</label>
+                <select name="schedulerAlgo" id="schedulerAlgo">
+                    <option value="SRTN" selected>Shortest Remaining Time First (SRTN)</option>
+                    <option value="HPF">Highest Priority First (HPF)</option>
+                    <option value="RR">Round Robin (RR)</option>
+                </select>
+            </div>
+            <div class="input-field hidden" id="time-slice-container">
+                <label for="TimeSlice">Time Slice:</label>
+                <input type="number" name="TimeSlice" id="TimeSlice" min="1" value="1" placeholder="Enter time slice">
+            </div>
+        </div>
+        <button id="start-btn" >Start Simulation</button>
+      </div>
+      <div id="scheduler-status" class="hidden">Waiting for our sleepy scheduler penguin to wake <span class="loading-dots"></span></div>
+    <script src="script.js"></script>
+</body>
+</html>
