@@ -19,7 +19,7 @@ int main(int agrc, char *argv[])
     signal(SIGCONT, resume);
     lineToPrint = (char *)malloc(LINE_SIZE * sizeof(char));
     #ifdef DEBUG
-        sprintf(lineToPrint, "The process started with pid= %d \n", processID);
+        sprintf(lineToPrint, "The process %d started \n", processID);
         printLine(lineToPrint, GRN);
     #endif
     clk_t lastClk = getClk();
@@ -33,19 +33,14 @@ int main(int agrc, char *argv[])
     raise(SIGINT);
 }
 
-// Stop the process from being executed
+// Set the runtime of the process of the currecnt remaining time
 void stop(int signum)
 {
-    // Set the runtime of the process of the currecnt remaining time
+    #ifdef DEBUG
+        sprintf(lineToPrint, "The process %d will stop ", processID);
+        printLine(lineToPrint, RED);
+    #endif
     runTime = remainingTime;
-
-#ifdef DEBUG
-    sprintf(lineToPrint, "I'm the process %d will stop ", processID);
-    print(lineToPrint, RED);
-    sprintf(lineToPrint, "at time %d", getClk());
-    printLine(lineToPrint, RED);
-#endif
-
     raise(SIGSTOP);
     signal(SIGTSTP, stop);
 }
@@ -53,12 +48,10 @@ void stop(int signum)
 // Set the start time of the process to be the current time stamp
 void resume(int signum)
 {
-#ifdef DEBUG
-    sprintf(lineToPrint, "I'm the process %d will resume ", processID);
-    print(lineToPrint, GRN);
-    sprintf(lineToPrint, "at time %d", getClk());
-    printLine(lineToPrint, GRN);
-#endif
+    #ifdef DEBUG
+        sprintf(lineToPrint, "The process %d will resume ", processID);
+        printLine(lineToPrint, GRN);
+    #endif
     startTime = getClk();
     signal(SIGCONT, resume);
 }

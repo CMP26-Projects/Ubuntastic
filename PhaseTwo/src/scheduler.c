@@ -14,7 +14,6 @@ int main(int argc, char *argv[])
     
     // Create scheduler 
     sch = createScheduler(argc, argv);
-
     switch (sch->algo)
     {
     case SRTN_t:
@@ -70,7 +69,6 @@ scheduler_t *createScheduler(int argc, char *args[])
     // Set the connnection with the message queue and the clock
     initClk();
     msgid = createMessageQueue();
-
     return sc;
 }
 void SRTNAlgo()
@@ -184,35 +182,10 @@ void RRAlgo(int timeSlice)
 
 void handleRemT()
 {
-    printf("the remianing time for process %d is %d at time %d\n",sch->runningP->ID,sch->runningP->RemT,getClk());
-    switch(sch->algo)
-    {
-        case HPF_t:
-        {
-            if(sch->runningP->RemT>=1)
-                sch->runningP->RemT--;
-            else
-                finishProcess(true);
-            break;
-        }
-        case RR_t:
-        {
-            if(sch->runningP->RemT>=1)
-                sch->runningP->RemT--;
-            else
-                finishProcess(true);
-            break;
-        }
-        case SRTN_t:
-        {
-            if(sch->runningP->RemT>=1)
-                sch->runningP->RemT--;
-            else
-                finishProcess(true);
-            break;
-        }
-        
-    }
+    if(sch->runningP->RemT>=1)
+        sch->runningP->RemT--;
+    else
+        finishProcess(true);
 }
 
 void receiveProcesses(int signum)
@@ -229,7 +202,6 @@ void receiveProcesses(int signum)
         // Create a process of the recieved data
         process_t *p = createProcess(msg.data);
         p->state = WAITING;
-
         ///[Author: Mariam]
         if (allocateProcess(sch->memory, p))
         {
@@ -291,7 +263,6 @@ void continueProcess(process_t *p)
 {
     sch->runningP = p;
     p->WT = getClk() -(p->AT); // Update the waiting time of the process
-    printf("we will start process %d at time = %d \n",sch->runningP->ID,getClk());
     if (p->RT == p->RemT) // The first time to run this process
         startProcess(p);
     else
@@ -316,7 +287,6 @@ void finishProcess(int signum)
     p->WTAT = (float)p->TAT / p->RT;      // Set the weighted turnaround time of the process
     p->WT = getClk() - (p->RT) - (p->AT); // Update the waiting time of the process
     sch->WTATList[sch->finishedPCount]=p->WTAT;
-    printf("The process WT is %f \n",sch->WTATList[sch->finishedPCount]);
     sch->totalWT+=p->WT;
     sch->finishedPCount++;        // Increment the finished processes count
     int state;

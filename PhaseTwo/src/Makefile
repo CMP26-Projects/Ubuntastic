@@ -32,8 +32,8 @@ build: clean
 	gcc systemTests/test_generator.c -o systemTests/test.out
 
 run: build
-	@./gen.out ./systemTests/tc1_hpf.txt 1 2
+	@./gen.out ./systemTests/tc1.txt 1 2
 
 
 clean:
-	@rm -f *.out *.o ./scheduler.log ./scheduler.perf ./systemTests/test.out 
+	@rm -f *.out *.o ./outputFiles/* ./systemTests/test.out

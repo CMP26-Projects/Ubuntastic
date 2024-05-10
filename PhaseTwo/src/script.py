@@ -55,7 +55,8 @@ def start_simulation():
         text_to_image(log_file_path, 'outputFiles/log_image.png')        
         create_perf_img(perf_file_path)
         create_log_img(log_file_path)        
-        create_mem_img(mem_file_path)        
+        create_mem_img(mem_file_path)
+        return        
     except subprocess.CalledProcessError as e:
         messagebox.showerror("Error", f"Failed to run gen.out: {e}")
         return

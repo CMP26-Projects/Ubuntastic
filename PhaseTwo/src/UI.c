@@ -126,7 +126,7 @@ void addMemoryEvent(state_t state, float *pInfo)
         exit(-1);
     }
     if(state==READY)
-        fprintf(file, "At\ttime\t%d\tallocated\t%d\tbytes\tfor\t\tprocess\t%d\tfrom\t%d\tto\t%d\n", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
+        fprintf(file, "At\ttime\t%d\tallocated\t%d\tbytes\tfor\tprocess\t%d\tfrom\t%d\tto\t%d\n", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
     else if(state==FINISHED)
         fprintf(file, "At\ttime\t%d\tfreed\t\t%d\tbytes\tfrom\tprocess\t%d\tfrom\t%d\tto\t%d\n", getClk(), (int)pInfo[1], (int)pInfo[0], (int)pInfo[2], (int)pInfo[3]);
     fclose(file);

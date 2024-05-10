@@ -110,10 +110,10 @@ void freeMemory(memory_t *memory, process_t *process)
     memoryNode *node = search(memory->root, process);
     if (node == NULL)
     {
-        printf("Wariing the process not found !\n");
+        printf("Warning the process not found !\n");
         return;
     }
-    printf("going to free the size of %d  in memory from %d to %d \n ", process->size, node->interval->start, node->interval->end);
+    printf("Deallocating the size of %d in memory from %d to %d \n ", process->size, node->interval->start, node->interval->end);
     node->process = NULL;
     bool merge = true;
     while (merge && node->parent != NULL)
