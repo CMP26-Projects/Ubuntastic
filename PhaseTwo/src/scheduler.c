@@ -1,7 +1,8 @@
 #include "scheduler.h"
 
 int msgid;
-bool receivingFlag = true;
+bool receivingFlag = false;
+bool terminateFlag = false;
 char lineToPrint[1000];
 
 int main(int argc, char *argv[])
@@ -54,7 +55,7 @@ scheduler_t *createScheduler(int argc, char *args[])
     sc->totalWT = 0;
     sc->totalWTAT = 0.0;
     sc->PCB = (process_t **)malloc((sc->pCount + 1) * sizeof(process_t *));
-    sc->memory = initializeMemory();
+    sc->memory = initializeMemory(sc->pCount + 1);
     sc->waitingContainer = createHeap(MEM_t);
     sc->WTATList = (int *)malloc(sc->pCount * sizeof(int));
     switch (sc->algo)
@@ -116,20 +117,26 @@ void SRTNAlgo()
 void HPFAlgo()
 {
     int lastClk = 0;
-    printf("I'm in HPF: The clock now is %d \n", getClk());
+    // printf("I'm in HPF: The clock now is %d \n", getClk());
     while (true)
     {
         if (lastClk == getClk()) // It's the same timeclk, so no need to process anything
-            continue;
+        {
+            if (!receivingFlag && !terminateFlag)
+                continue;
+        }
         // sleepMilliseconds(180);
+        if (receivingFlag)
+            receivingFlag = false;
+        if (terminateFlag)
+            terminateFlag = false; // Reset the flag to true to receive the new processes at the next time stamp
         printf("I'm in HPF: The clock now is %d \n", getClk());
         lastClk = getClk();
         if (sch->runningP != NULL)
             sch->runningP->RemT--;
-        while (receivingFlag)
-            ; // Wait to get all the processes arriving at this time stamp
-        printf("HPF: I have recieved a process at time %d \n", getClk());
-        receivingFlag = true; // Reset the flag to true to receive the new processes at the next time stamp
+        // while (receivingFlag); // Wait to get all the processes arriving at this time stamp
+        // printf("HPF: I have recieved a process at time %d \n", getClk());
+        // receivingFlag = true; // Reset the flag to true to receive the new processes at the next time stamp
 
         if (isReadyEmpty() && sch->runningP == NULL) // There is no ready processes to run, so no need to process anything
             continue;
@@ -193,6 +200,7 @@ void RRAlgo(int timeSlice)
 
 void receiveProcesses(int signum)
 {
+    printf("Scheduler: I have received a signal to receive the processes at time %d \n", getClk());
     processMsg msg;
     while (true)
     {
@@ -216,6 +224,10 @@ void receiveProcesses(int signum)
         {
             printf("Now the process found a place in memory and it going to be in ready : )))\n");
             insertIntoReady(p);
+            // if (sch->receivedPCount == 0)
+            // {
+            //     sch->runningP = p;
+            // }
             printf("Allocator: The time now is %d and I will attach to log file \n", getClk());
             updateOutfile(p);
         }
@@ -229,7 +241,8 @@ void receiveProcesses(int signum)
         // Increase the number of recieved processes
         sch->receivedPCount++;
     }
-    receivingFlag = false; // We finished receiving all the processes of this time clock
+    printf("Scheduler: Finishing recieving the processes at time %d \n", getClk());
+    receivingFlag = true; // We finished receiving all the processes of this time clock
     signal(SIGUSR1, receiveProcesses);
 }
 
@@ -288,7 +301,8 @@ void continueProcess(process_t *p)
     else
     {
         // It has run before
-        int busyTime = (p->RT) - (p->RemT);    // Get the total time this process has run
+        int busyTime = (p->RT) - (p->RemT); // Get the total time this process has run
+
         p->WT = getClk() - busyTime - (p->AT); // Update the waiting time of the process
         p->state = RESUMED;
         kill(sch->PCB[p->ID]->PID, SIGCONT); // Send SIGCONT to resume the process
@@ -325,7 +339,7 @@ void finishProcess(int signum)
 
     // Reset the SIGCHLD signal to this function as a handler
     ///[Author: Mariam]
-
+    terminateFlag = true;
     signal(SIGUSR2, finishProcess);
 }
 
